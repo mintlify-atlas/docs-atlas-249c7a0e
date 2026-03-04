@@ -1,0 +1,534 @@
+---
+title: "Migration Guide"
+description: "Migrate to Atemporal from Day.js, Luxon, or Moment.js with side-by-side comparisons and API mapping"
+---
+
+# Migration Guide
+
+Migrating to Atemporal from other date libraries is straightforward. This guide provides side-by-side comparisons and highlights key differences to help you transition smoothly.
+
+## Why Migrate to Atemporal?
+
+<CardGroup cols={2}>
+  <Card title="Modern Foundation" icon="calendar">
+    Built on the Temporal API - the future standard for JavaScript date/time
+  </Card>
+  <Card title="Type-Safe" icon="shield">
+    Full TypeScript support with excellent developer experience
+  </Card>
+  <Card title="Immutable by Design" icon="lock">
+    All operations return new instances - no accidental mutations
+  </Card>
+  <Card title="Time Zone First" icon="globe">
+    First-class IANA timezone support built into the core
+  </Card>
+</CardGroup>
+
+## From Day.js
+
+Atemporal's API is heavily inspired by Day.js, making migration especially easy. Most method names are identical.
+
+### Basic Usage
+
+<CodeGroup>
+```typescript Day.js
+import dayjs from 'dayjs';
+
+const now = dayjs();
+const date = dayjs('2024-03-15');
+const unix = dayjs.unix(1710504000);
+```
+
+```typescript Atemporal
+import atemporal from 'atemporal';
+
+const now = atemporal();
+const date = atemporal('2024-03-15');
+const unix = atemporal.unix(1710504000);
+```
+</CodeGroup>
+
+### Formatting
+
+<CodeGroup>
+```typescript Day.js
+const formatted = dayjs().format('YYYY-MM-DD HH:mm:ss');
+```
+
+```typescript Atemporal
+const formatted = atemporal().format('YYYY-MM-DD HH:mm:ss');
+```
+</CodeGroup>
+
+### Manipulation
+
+<CodeGroup>
+```typescript Day.js
+const future = dayjs()
+  .add(7, 'day')
+  .subtract(2, 'hour')
+  .startOf('day');
+```
+
+```typescript Atemporal
+const future = atemporal()
+  .add(7, 'day')
+  .subtract(2, 'hour')
+  .startOf('day');
+```
+</CodeGroup>
+
+### Plugins
+
+<Tabs>
+  <Tab title="Day.js Plugin Loading">
+    ```typescript
+    import dayjs from 'dayjs';
+    import relativeTime from 'dayjs/plugin/relativeTime';
+    import customParseFormat from 'dayjs/plugin/customParseFormat';
+
+    dayjs.extend(relativeTime);
+    dayjs.extend(customParseFormat);
+
+    const ago = dayjs().subtract(2, 'hour').fromNow();
+    const parsed = dayjs('25/12/2024', 'DD/MM/YYYY');
+    ```
+  </Tab>
+  
+  <Tab title="Atemporal Plugin Loading">
+    ```typescript
+    import atemporal from 'atemporal';
+    import relativeTime from 'atemporal/plugins/relativeTime';
+    import customParseFormat from 'atemporal/plugins/customParseFormat';
+
+    atemporal.extend(relativeTime);
+    atemporal.extend(customParseFormat);
+
+    const ago = atemporal().subtract(2, 'hour').fromNow();
+    const parsed = atemporal.fromFormat('25/12/2024', 'DD/MM/YYYY');
+    ```
+  </Tab>
+  
+  <Tab title="Atemporal Lazy Loading">
+    ```typescript
+    import atemporal from 'atemporal';
+
+    // Load plugins on demand - reduces initial bundle size
+    await atemporal.lazyLoad('relativeTime');
+    await atemporal.lazyLoad('customParseFormat');
+
+    const ago = atemporal().subtract(2, 'hour').fromNow();
+    const parsed = atemporal.fromFormat('25/12/2024', 'DD/MM/YYYY');
+    ```
+  </Tab>
+</Tabs>
+
+### Key Differences from Day.js
+
+<AccordionGroup>
+  <Accordion title="Timezone Handling">
+    Day.js requires the `timezone` plugin for timezone support. Atemporal has **first-class timezone support** built into the core:
+
+    ```typescript
+    // Atemporal - timezone support built-in
+    const tokyo = atemporal('2024-03-15T10:00:00', 'Asia/Tokyo');
+    const newYork = tokyo.timeZone('America/New_York');
+    
+    // Change default timezone globally
+    atemporal.setDefaultTimeZone('Europe/London');
+    ```
+  </Accordion>
+
+  <Accordion title="Custom Parse Format Method Name">
+    Day.js uses the same constructor with a format parameter. Atemporal provides a dedicated static method:
+
+    ```typescript
+    // Day.js
+    dayjs('25/12/2024', 'DD/MM/YYYY');
+
+    // Atemporal
+    atemporal.fromFormat('25/12/2024', 'DD/MM/YYYY');
+    ```
+  </Accordion>
+
+  <Accordion title="Duration Handling">
+    Atemporal uses native Temporal.Duration objects:
+
+    ```typescript
+    // Create a duration
+    const duration = atemporal.duration({ years: 1, months: 6, days: 15 });
+
+    // Humanize it (with durationHumanizer plugin)
+    atemporal.extend(durationHumanizer);
+    const readable = atemporal.humanize(duration); // "1 year, 6 months, 15 days"
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## From Luxon
+
+Luxon users will find Atemporal's immutability and timezone support familiar, but with a more chainable API.
+
+### Basic Usage
+
+<CodeGroup>
+```typescript Luxon
+import { DateTime } from 'luxon';
+
+const now = DateTime.now();
+const date = DateTime.fromISO('2024-03-15');
+const unix = DateTime.fromSeconds(1710504000);
+```
+
+```typescript Atemporal
+import atemporal from 'atemporal';
+
+const now = atemporal();
+const date = atemporal('2024-03-15');
+const unix = atemporal.unix(1710504000);
+```
+</CodeGroup>
+
+### Formatting
+
+<CodeGroup>
+```typescript Luxon
+const formatted = DateTime.now().toFormat('yyyy-MM-dd HH:mm:ss');
+```
+
+```typescript Atemporal
+const formatted = atemporal().format('YYYY-MM-DD HH:mm:ss');
+```
+</CodeGroup>
+
+<Note>
+  Luxon uses lowercase tokens (`yyyy`, `dd`) while Atemporal uses uppercase tokens (`YYYY`, `DD`) following Day.js conventions.
+</Note>
+
+### Manipulation
+
+<CodeGroup>
+```typescript Luxon
+const future = DateTime.now()
+  .plus({ days: 7 })
+  .minus({ hours: 2 })
+  .startOf('day');
+```
+
+```typescript Atemporal
+const future = atemporal()
+  .add(7, 'day')
+  .subtract(2, 'hour')
+  .startOf('day');
+```
+</CodeGroup>
+
+### Timezone Operations
+
+<CodeGroup>
+```typescript Luxon
+const tokyo = DateTime.now().setZone('Asia/Tokyo');
+const newYork = tokyo.setZone('America/New_York');
+```
+
+```typescript Atemporal
+const tokyo = atemporal(undefined, 'Asia/Tokyo');
+const newYork = tokyo.timeZone('America/New_York');
+```
+</CodeGroup>
+
+### Key Differences from Luxon
+
+<AccordionGroup>
+  <Accordion title="Method Names">
+    | Operation | Luxon | Atemporal |
+    |-----------|-------|----------|
+    | Add time | `.plus({ days: 5 })` | `.add(5, 'day')` |
+    | Subtract time | `.minus({ hours: 2 })` | `.subtract(2, 'hour')` |
+    | Change timezone | `.setZone('Asia/Tokyo')` | `.timeZone('Asia/Tokyo')` |
+    | Format | `.toFormat('yyyy-MM-dd')` | `.format('YYYY-MM-DD')` |
+    | ISO String | `.toISO()` | `.toISOString()` |
+  </Accordion>
+
+  <Accordion title="Chaining Style">
+    Luxon uses object-based parameters, Atemporal uses positional parameters:
+
+    ```typescript
+    // Luxon
+    dt.plus({ years: 1, months: 2, days: 3 });
+
+    // Atemporal - chain multiple operations
+    atemporal()
+      .add(1, 'year')
+      .add(2, 'month')
+      .add(3, 'day');
+    ```
+  </Accordion>
+
+  <Accordion title="Validity Checking">
+    Both libraries handle invalid dates, but with different patterns:
+
+    ```typescript
+    // Luxon
+    const invalid = DateTime.fromISO('invalid');
+    if (!invalid.isValid) {
+      console.log(invalid.invalidReason);
+    }
+
+    // Atemporal
+    const invalid = atemporal('invalid');
+    if (!invalid.isValid()) {
+      // All operations on invalid instances return the same invalid instance
+      console.log(invalid.format('YYYY-MM-DD')); // 'Invalid Date'
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## From Moment.js
+
+<Warning>
+  Moment.js is in maintenance mode. The Moment team recommends migrating to modern alternatives like Atemporal.
+</Warning>
+
+### Basic Usage
+
+<CodeGroup>
+```typescript Moment.js
+import moment from 'moment';
+
+const now = moment();
+const date = moment('2024-03-15');
+const unix = moment.unix(1710504000);
+```
+
+```typescript Atemporal
+import atemporal from 'atemporal';
+
+const now = atemporal();
+const date = atemporal('2024-03-15');
+const unix = atemporal.unix(1710504000);
+```
+</CodeGroup>
+
+### Critical: Mutability vs Immutability
+
+<Warning>
+  **Breaking Change**: Moment.js is mutable by default. Atemporal is **always immutable**.
+</Warning>
+
+<CodeGroup>
+```typescript Moment.js (Mutable)
+const date = moment('2024-03-15');
+date.add(7, 'days'); // Mutates the original!
+console.log(date.format('YYYY-MM-DD')); // '2024-03-22'
+```
+
+```typescript Atemporal (Immutable)
+const date = atemporal('2024-03-15');
+date.add(7, 'day'); // Returns NEW instance, original unchanged
+console.log(date.format('YYYY-MM-DD')); // Still '2024-03-15'
+
+const newDate = date.add(7, 'day');
+console.log(newDate.format('YYYY-MM-DD')); // '2024-03-22'
+```
+</CodeGroup>
+
+### Manipulation
+
+<CodeGroup>
+```typescript Moment.js
+const date = moment()
+  .add(7, 'days')
+  .subtract(2, 'hours')
+  .startOf('day');
+```
+
+```typescript Atemporal
+const date = atemporal()
+  .add(7, 'day')
+  .subtract(2, 'hour')
+  .startOf('day');
+```
+</CodeGroup>
+
+<Note>
+  Both use singular and plural forms, but Atemporal also supports short aliases (`d`, `h`, `m`, `s`).
+</Note>
+
+### Comparison
+
+<CodeGroup>
+```typescript Moment.js
+const a = moment('2024-03-15');
+const b = moment('2024-03-20');
+
+if (a.isBefore(b)) { /* ... */ }
+if (a.isSame(b, 'day')) { /* ... */ }
+if (a.isAfter(b)) { /* ... */ }
+```
+
+```typescript Atemporal
+const a = atemporal('2024-03-15');
+const b = atemporal('2024-03-20');
+
+if (a.isBefore(b)) { /* ... */ }
+if (a.isSame(b, 'day')) { /* ... */ }
+if (a.isAfter(b)) { /* ... */ }
+```
+</CodeGroup>
+
+### Differences
+
+<AccordionGroup>
+  <Accordion title="Clone Behavior">
+    In Moment, you often need `.clone()` to avoid mutations. In Atemporal, every operation returns a new instance:
+
+    ```typescript
+    // Moment - need explicit clone
+    const original = moment();
+    const copy = original.clone().add(1, 'day');
+
+    // Atemporal - implicit immutability
+    const original = atemporal();
+    const copy = original.add(1, 'day'); // original unchanged
+    ```
+  </Accordion>
+
+  <Accordion title="Locale Configuration">
+    ```typescript
+    // Moment - global locale
+    moment.locale('es');
+
+    // Atemporal - global default locale
+    atemporal.setDefaultLocale('es-ES');
+    ```
+  </Accordion>
+
+  <Accordion title="Min/Max Functions">
+    ```typescript
+    // Moment
+    const earliest = moment.min([date1, date2, date3]);
+    const latest = moment.max([date1, date2, date3]);
+
+    // Atemporal - supports both array and spread syntax
+    const earliest = atemporal.min([date1, date2, date3]);
+    const latest = atemporal.max(date1, date2, date3);
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Migration Checklist
+
+<Steps>
+  <Step title="Install Atemporal">
+    ```bash
+    npm install atemporal
+    ```
+  </Step>
+
+  <Step title="Update Imports">
+    Replace your date library imports:
+    ```typescript
+    // Before
+    import dayjs from 'dayjs';
+    import { DateTime } from 'luxon';
+    import moment from 'moment';
+
+    // After
+    import atemporal from 'atemporal';
+    ```
+  </Step>
+
+  <Step title="Update Method Calls">
+    Use the comparison tables above to update method names and parameters.
+  </Step>
+
+  <Step title="Check for Mutations (from Moment)">
+    If migrating from Moment, search for places where you relied on mutation and ensure you capture the returned value:
+    ```typescript
+    // Before (Moment)
+    date.add(1, 'day');
+
+    // After (Atemporal)
+    date = date.add(1, 'day');
+    ```
+  </Step>
+
+  <Step title="Load Required Plugins">
+    Identify which plugins you need and load them:
+    ```typescript
+    import atemporal from 'atemporal';
+    import relativeTime from 'atemporal/plugins/relativeTime';
+    
+    atemporal.extend(relativeTime);
+    
+    // Or use lazy loading
+    await atemporal.lazyLoad('relativeTime');
+    ```
+  </Step>
+
+  <Step title="Test Thoroughly">
+    Pay special attention to:
+    - Timezone operations
+    - Format strings (especially from Luxon)
+    - Mutation assumptions (from Moment)
+    - Edge cases with invalid dates
+  </Step>
+</Steps>
+
+## Common Pitfalls
+
+<Warning>
+  **Watch out for these common migration issues:**
+</Warning>
+
+### Format Token Differences
+
+If migrating from Luxon, remember to convert format tokens:
+
+| Luxon | Atemporal |
+|-------|----------|
+| `yyyy` | `YYYY` |
+| `yy` | `YY` |
+| `dd` | `DD` |
+| `d` | `D` |
+| `HH` | `HH` |
+| `h` | `h` |
+
+### Assuming Mutability
+
+```typescript
+// ❌ Wrong - ignoring return value
+const date = atemporal('2024-03-15');
+date.add(7, 'day');
+console.log(date.format('YYYY-MM-DD')); // Still '2024-03-15'
+
+// ✅ Correct - using return value
+const date = atemporal('2024-03-15');
+const newDate = date.add(7, 'day');
+console.log(newDate.format('YYYY-MM-DD')); // '2024-03-22'
+```
+
+### Plugin Methods Before Loading
+
+```typescript
+// ❌ Wrong - using plugin method before loading
+const ago = atemporal().subtract(2, 'hour').fromNow();
+// TypeError: fromNow is not a function
+
+// ✅ Correct - load plugin first
+import relativeTime from 'atemporal/plugins/relativeTime';
+atemporal.extend(relativeTime);
+
+const ago = atemporal().subtract(2, 'hour').fromNow();
+```
+
+## Getting Help
+
+If you encounter issues during migration:
+
+- Check the [API Reference](/api-reference/core/atemporal) for detailed method documentation
+- Review [Error Handling](/guides/error-handling) for debugging tips
+- See [Advanced Patterns](/guides/advanced-patterns) for best practices
+- Open an issue on [GitHub](https://github.com/NaturalDevCR/atemporal)

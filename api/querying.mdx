@@ -1,0 +1,508 @@
+---
+title: 'Querying Methods'
+description: 'Methods for comparing, querying, and extracting information from dates'
+---
+
+# Querying Methods
+
+Methods for comparing dates, calculating differences, and extracting date components.
+
+## .isBefore()
+
+Checks if the current instance is before another date.
+
+```typescript
+isBefore(other: DateInput): boolean
+```
+
+<ParamField path="other" type="DateInput" required>
+  The date to compare against
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  `true` if the current instance is before the other date, `false` otherwise
+</ResponseField>
+
+### Examples
+
+```typescript
+const date1 = atemporal('2024-01-15');
+const date2 = atemporal('2024-01-20');
+
+date1.isBefore(date2); // true
+date2.isBefore(date1); // false
+date1.isBefore('2024-02-01'); // true
+```
+
+---
+
+## .isAfter()
+
+Checks if the current instance is after another date.
+
+```typescript
+isAfter(other: DateInput): boolean
+```
+
+<ParamField path="other" type="DateInput" required>
+  The date to compare against
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  `true` if the current instance is after the other date, `false` otherwise
+</ResponseField>
+
+### Examples
+
+```typescript
+const date1 = atemporal('2024-01-15');
+const date2 = atemporal('2024-01-20');
+
+date1.isAfter(date2); // false
+date2.isAfter(date1); // true
+date2.isAfter('2024-01-10'); // true
+```
+
+---
+
+## .isSame()
+
+Checks if the current instance is the same as another date, optionally to a specific unit.
+
+```typescript
+isSame(otherDate: DateInput, unit?: 'year' | 'month' | 'day'): boolean
+```
+
+<ParamField path="otherDate" type="DateInput" required>
+  The date to compare against
+</ParamField>
+
+<ParamField path="unit" type="'year' | 'month' | 'day'" optional>
+  If provided, compares only up to this unit. If omitted, compares to the millisecond.
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  `true` if the dates are the same (within the specified unit), `false` otherwise
+</ResponseField>
+
+### Examples
+
+```typescript
+const date1 = atemporal('2024-01-15T10:30:00Z');
+const date2 = atemporal('2024-01-15T14:30:00Z');
+const date3 = atemporal('2024-01-15T10:30:00Z');
+
+// Exact comparison (millisecond precision)
+date1.isSame(date3); // true
+date1.isSame(date2); // false
+
+// Compare by unit
+date1.isSame(date2, 'day');   // true (same day)
+date1.isSame(date2, 'month'); // true (same month)
+date1.isSame(date2, 'year');  // true (same year)
+
+date1.isSame('2024-02-15', 'year');  // true
+date1.isSame('2024-02-15', 'month'); // false
+```
+
+---
+
+## .isSameDay()
+
+Checks if the current instance is on the same calendar day as another date in their respective timezones.
+
+```typescript
+isSameDay(other: DateInput): boolean
+```
+
+<ParamField path="other" type="DateInput" required>
+  The date to compare against
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  `true` if they are on the same calendar day, `false` otherwise
+</ResponseField>
+
+### Examples
+
+```typescript
+const date1 = atemporal('2024-01-15T10:00:00Z');
+const date2 = atemporal('2024-01-15T23:59:59Z');
+const date3 = atemporal('2024-01-16T00:00:00Z');
+
+date1.isSameDay(date2); // true
+date1.isSameDay(date3); // false
+```
+
+---
+
+## .isSameOrBefore()
+
+Checks if the current instance is the same as or before another date.
+
+```typescript
+isSameOrBefore(other: DateInput): boolean
+```
+
+<ParamField path="other" type="DateInput" required>
+  The date to compare against
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  `true` if the current instance is the same as or before the other date
+</ResponseField>
+
+### Examples
+
+```typescript
+const date1 = atemporal('2024-01-15');
+const date2 = atemporal('2024-01-15');
+const date3 = atemporal('2024-01-20');
+
+date1.isSameOrBefore(date2); // true (same)
+date1.isSameOrBefore(date3); // true (before)
+date3.isSameOrBefore(date1); // false
+```
+
+---
+
+## .isSameOrAfter()
+
+Checks if the current instance is the same as or after another date.
+
+```typescript
+isSameOrAfter(other: DateInput): boolean
+```
+
+<ParamField path="other" type="DateInput" required>
+  The date to compare against
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  `true` if the current instance is the same as or after the other date
+</ResponseField>
+
+### Examples
+
+```typescript
+const date1 = atemporal('2024-01-20');
+const date2 = atemporal('2024-01-20');
+const date3 = atemporal('2024-01-15');
+
+date1.isSameOrAfter(date2); // true (same)
+date1.isSameOrAfter(date3); // true (after)
+date3.isSameOrAfter(date1); // false
+```
+
+---
+
+## .isBetween()
+
+Checks if the current instance is between two other dates.
+
+```typescript
+isBetween(start: DateInput, end: DateInput, inclusivity?: '()' | '[]' | '(]' | '[)'): boolean
+```
+
+<ParamField path="start" type="DateInput" required>
+  The start of the range
+</ParamField>
+
+<ParamField path="end" type="DateInput" required>
+  The end of the range
+</ParamField>
+
+<ParamField path="inclusivity" type="string" optional>
+  Defines if the start and end dates are inclusive:
+  - `'[]'` - Both inclusive (default)
+  - `'()'` - Both exclusive
+  - `'[)'` - Start inclusive, end exclusive
+  - `'(]'` - Start exclusive, end inclusive
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  `true` if the current instance is within the range
+</ResponseField>
+
+### Examples
+
+```typescript
+const date = atemporal('2024-06-15');
+const start = atemporal('2024-01-01');
+const end = atemporal('2024-12-31');
+
+// Inclusive (default)
+date.isBetween(start, end);        // true
+date.isBetween(start, end, '[]');  // true
+
+// Boundary cases
+start.isBetween(start, end);       // true (inclusive)
+start.isBetween(start, end, '()'); // false (exclusive)
+start.isBetween(start, end, '[)'); // true (start inclusive)
+
+end.isBetween(start, end);         // true (inclusive)
+end.isBetween(start, end, '()');   // false (exclusive)
+end.isBetween(start, end, '(]');   // true (end inclusive)
+```
+
+---
+
+## .diff()
+
+Calculates the difference between the current instance and another date.
+
+```typescript
+diff(other: DateInput, unit?: TimeUnit, float?: boolean): number
+```
+
+<ParamField path="other" type="DateInput" required>
+  The date to compare against
+</ParamField>
+
+<ParamField path="unit" type="TimeUnit" optional>
+  The unit of time to calculate the difference in. Defaults to `'millisecond'`.
+  Accepts: 'year', 'month', 'week', 'day', 'hour', 'minute', 'second', 'millisecond'
+</ParamField>
+
+<ParamField path="float" type="boolean" optional>
+  If `true`, returns the exact floating-point difference. If `false` (default), returns a truncated integer.
+</ParamField>
+
+<ResponseField name="return" type="number">
+  The difference in the specified unit, or `NaN` if the operation is invalid
+</ResponseField>
+
+### Examples
+
+```typescript
+const d1 = atemporal('2024-01-01T12:00:00Z');
+const d2 = atemporal('2024-01-02T18:00:00Z'); // 30 hours later
+
+// Integer differences (default)
+d2.diff(d1, 'day');    // 1
+d2.diff(d1, 'hour');   // 30
+d2.diff(d1, 'minute'); // 1800
+
+// Floating-point differences
+d2.diff(d1, 'day', true);  // 1.25
+d2.diff(d1, 'week', true); // 0.17857142857142858
+
+// Negative differences
+d1.diff(d2, 'day'); // -1
+
+// Different units
+const future = atemporal('2025-01-01');
+const now = atemporal('2024-01-01');
+
+future.diff(now, 'year');  // 1
+future.diff(now, 'month'); // 12
+future.diff(now, 'week');  // 52
+future.diff(now, 'day');   // 366 (2024 is a leap year)
+```
+
+---
+
+## .get()
+
+Gets the value of a specific unit of time.
+
+```typescript
+get(unit: SettableUnit): number
+```
+
+<ParamField path="unit" type="SettableUnit" required>
+  The unit to retrieve: 'year', 'month', 'day', 'hour', 'minute', 'second', 'millisecond', or 'quarter'
+</ParamField>
+
+<ResponseField name="return" type="number">
+  The numeric value of the unit, or `NaN` if the instance is invalid
+</ResponseField>
+
+### Examples
+
+```typescript
+const date = atemporal('2024-06-15T14:30:45.500Z');
+
+date.get('year');        // 2024
+date.get('month');       // 6
+date.get('day');         // 15
+date.get('hour');        // 14
+date.get('minute');      // 30
+date.get('second');      // 45
+date.get('millisecond'); // 500
+date.get('quarter');     // 2 (Q2)
+```
+
+---
+
+## .isValid()
+
+Checks if the Atemporal instance holds a valid date.
+
+```typescript
+isValid(): boolean
+```
+
+<ResponseField name="return" type="boolean">
+  `true` if the date is valid, `false` otherwise
+</ResponseField>
+
+### Examples
+
+```typescript
+const valid = atemporal('2024-01-15');
+const invalid = atemporal('invalid-date');
+
+valid.isValid();   // true
+invalid.isValid(); // false
+
+// Check before operations
+if (date.isValid()) {
+  console.log(date.format('YYYY-MM-DD'));
+}
+```
+
+---
+
+## .isLeapYear()
+
+Checks if the year of the current instance is a leap year.
+
+```typescript
+isLeapYear(): boolean
+```
+
+<ResponseField name="return" type="boolean">
+  `true` if it is a leap year, `false` otherwise
+</ResponseField>
+
+### Examples
+
+```typescript
+atemporal('2024-01-01').isLeapYear(); // true (2024 is a leap year)
+atemporal('2023-01-01').isLeapYear(); // false
+atemporal('2000-01-01').isLeapYear(); // true
+atemporal('1900-01-01').isLeapYear(); // false
+```
+
+---
+
+## Getters
+
+Convenient property accessors for date components.
+
+### .year
+
+The 4-digit year.
+
+```typescript
+date.year; // 2024
+```
+
+### .month
+
+The month of the year (1-12).
+
+```typescript
+date.month; // 6 (June)
+```
+
+### .day
+
+The day of the month (1-31).
+
+```typescript
+date.day; // 15
+```
+
+### .hour
+
+The hour of the day (0-23).
+
+```typescript
+date.hour; // 14 (2 PM)
+```
+
+### .minute
+
+The minute of the hour (0-59).
+
+```typescript
+date.minute; // 30
+```
+
+### .second
+
+The second of the minute (0-59).
+
+```typescript
+date.second; // 45
+```
+
+### .millisecond
+
+The millisecond of the second (0-999).
+
+```typescript
+date.millisecond; // 500
+```
+
+### .dayOfWeekName
+
+The full name of the day of the week, based on the default locale.
+
+```typescript
+date.dayOfWeekName; // 'Saturday'
+```
+
+### .weekOfYear
+
+The ISO week number of the year (1-53).
+
+```typescript
+date.weekOfYear; // 24
+```
+
+### .daysInMonth
+
+The number of days in the current month.
+
+```typescript
+atemporal('2024-02-01').daysInMonth; // 29 (leap year)
+atemporal('2023-02-01').daysInMonth; // 28
+atemporal('2024-06-01').daysInMonth; // 30
+```
+
+### .timeZoneName / .timeZoneId
+
+The IANA time zone identifier.
+
+```typescript
+date.timeZoneName; // 'America/New_York'
+date.timeZoneId;   // 'America/New_York'
+```
+
+### Example Usage
+
+```typescript
+const date = atemporal('2024-06-15T14:30:45.500Z');
+
+console.log(`Year: ${date.year}`);
+console.log(`Month: ${date.month}`);
+console.log(`Day: ${date.day}`);
+console.log(`Hour: ${date.hour}`);
+console.log(`Minute: ${date.minute}`);
+console.log(`Second: ${date.second}`);
+console.log(`Millisecond: ${date.millisecond}`);
+console.log(`Day of week: ${date.dayOfWeekName}`);
+console.log(`Week of year: ${date.weekOfYear}`);
+console.log(`Days in month: ${date.daysInMonth}`);
+```
+
+---
+
+## Related
+
+- [Manipulation Methods](/api/manipulation) - Modify dates
+- [Formatting API](/api/formatting-api) - Format dates for display
+- [Utilities](/api/utilities) - Static utility functions

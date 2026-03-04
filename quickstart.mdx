@@ -1,80 +1,434 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get up and running with Atemporal in minutes
 ---
 
-## Get started in three steps
+This guide will walk you through the essential features of Atemporal, from creating date instances to manipulating and formatting them.
 
-Get your documentation site running locally and make your first customization.
+## Basic Usage
 
-### Step 1: Set up your local environment
+### Creating Instances
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+Atemporal provides multiple ways to create date-time instances:
+
+```javascript
+import atemporal from 'atemporal';
+
+// Current date and time
+const now = atemporal();
+
+// From ISO 8601 string
+const date = atemporal('2024-07-26T15:30:00Z');
+
+// From JavaScript Date
+const fromJsDate = atemporal(new Date());
+
+// From Unix timestamp (milliseconds)
+const fromTimestamp = atemporal(1722008400000);
+
+// From Unix timestamp (seconds)
+const fromUnix = atemporal.unix(1722008400);
+
+// From array [year, month, day, hour, minute, second]
+const fromArray = atemporal([2024, 7, 26, 15, 30, 0]);
+
+// From object
+const fromObject = atemporal({
+  year: 2024,
+  month: 7,
+  day: 26,
+  hour: 15,
+  minute: 30
+});
+```
+
+<Info>
+  All methods return an immutable `Atemporal` instance. Any manipulation creates a new instance, leaving the original unchanged.
+</Info>
+
+### With Time Zones
+
+Specify an IANA time zone when creating instances:
+
+```javascript
+// Create in a specific time zone
+const nyTime = atemporal('2024-07-26T15:30:00', 'America/New_York');
+const tokyoTime = atemporal('2024-07-26T15:30:00', 'Asia/Tokyo');
+
+// Convert existing instance to different time zone
+const londonTime = nyTime.timeZone('Europe/London');
+```
+
+## Manipulating Dates
+
+<Steps>
+  <Step title="Adding Time">
+    Use `.add()` to add time to a date:
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    ```javascript
+    const now = atemporal();
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    const tomorrow = now.add(1, 'day');
+    const nextWeek = now.add(7, 'days');
+    const nextMonth = now.add(1, 'month');
+    const in3Hours = now.add(3, 'hours');
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    // Chain multiple operations
+    const future = now
+      .add(2, 'months')
+      .add(5, 'days')
+      .add(3, 'hours');
+    ```
+    
+    Supported units: `year`, `month`, `week`, `day`, `hour`, `minute`, `second`, `millisecond` (and their plural forms)
+  </Step>
+  
+  <Step title="Subtracting Time">
+    Use `.subtract()` to subtract time:
+    
+    ```javascript
+    const now = atemporal();
+    
+    const yesterday = now.subtract(1, 'day');
+    const lastWeek = now.subtract(7, 'days');
+    const twoHoursAgo = now.subtract(2, 'hours');
+    ```
+  </Step>
+  
+  <Step title="Setting Specific Values">
+    Use `.set()` to change specific fields:
+    
+    ```javascript
+    const date = atemporal('2024-07-26T15:30:00');
+    
+    const modified = date
+      .set('hour', 9)
+      .set('minute', 0)
+      .set('second', 0);
+    // Result: 2024-07-26T09:00:00
+    
+    // Set date components
+    const newYear = date.set('year', 2025);
+    const newMonth = date.set('month', 12);
+    const newDay = date.set('day', 1);
+    ```
+  </Step>
+  
+  <Step title="Start and End of Units">
+    Jump to the start or end of any time unit:
+    
+    ```javascript
+    const date = atemporal('2024-07-26T15:30:45');
+    
+    const startOfDay = date.startOf('day');
+    // 2024-07-26T00:00:00
+    
+    const endOfDay = date.endOf('day');
+    // 2024-07-26T23:59:59.999999999
+    
+    const startOfMonth = date.startOf('month');
+    // 2024-07-01T00:00:00
+    
+    const endOfYear = date.endOf('year');
+    // 2024-12-31T23:59:59.999999999
+    ```
+  </Step>
+</Steps>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Getting Values
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Access individual date components using getter properties:
 
-### Step 3: Go live
+```javascript
+const date = atemporal('2024-07-26T15:30:45');
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+// Date components
+console.log(date.year);        // 2024
+console.log(date.month);       // 7
+console.log(date.day);         // 26
 
-## Next steps
+// Time components
+console.log(date.hour);        // 15
+console.log(date.minute);      // 30
+console.log(date.second);      // 45
+console.log(date.millisecond); // 0
 
-Now that you have your docs running, explore these key features:
+// Day of week (1 = Monday, 7 = Sunday)
+console.log(date.dayOfWeek);   // 5 (Friday)
+
+// Day name
+console.log(date.dayOfWeekName); // "Friday"
+
+// Unix timestamps
+console.log(date.unix());      // 1722008445 (seconds)
+console.log(date.valueOf());   // 1722008445000 (milliseconds)
+```
+
+## Formatting Dates
+
+Atemporal supports two formatting approaches:
+
+<Tabs>
+  <Tab title="Token-Based (Day.js style)">
+    Use format tokens for familiar formatting:
+    
+    ```javascript
+    const date = atemporal('2024-07-26T15:30:00');
+    
+    date.format('YYYY-MM-DD');           // "2024-07-26"
+    date.format('DD/MM/YYYY');           // "26/07/2024"
+    date.format('YYYY-MM-DD HH:mm:ss');  // "2024-07-26 15:30:00"
+    date.format('dddd, MMMM D, YYYY');   // "Friday, July 26, 2024"
+    date.format('h:mm A');               // "3:30 PM"
+    ```
+    
+    Common tokens:
+    - `YYYY` - 4-digit year
+    - `MM` - 2-digit month
+    - `DD` - 2-digit day
+    - `HH` - 2-digit hour (24h)
+    - `hh` - 2-digit hour (12h)
+    - `mm` - 2-digit minute
+    - `ss` - 2-digit second
+    - `A` - AM/PM
+    - `dddd` - Full weekday name
+    - `MMMM` - Full month name
+  </Tab>
+  
+  <Tab title="Intl.DateTimeFormat (Localized)">
+    Use Intl options for localized formatting:
+    
+    ```javascript
+    const date = atemporal('2024-07-26T15:30:00');
+    
+    // Using Intl options
+    date.format({
+      dateStyle: 'long',
+      timeStyle: 'short'
+    });
+    // "July 26, 2024 at 3:30 PM"
+    
+    // Full control
+    date.format({
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'long'
+    });
+    // "Friday, July 26, 2024"
+    ```
+  </Tab>
+</Tabs>
+
+### Localization
+
+Set a default locale globally or per format:
+
+```javascript
+// Set global locale
+atemporal.setDefaultLocale('fr-FR');
+
+const date = atemporal('2024-07-26');
+
+// Uses global locale
+date.format('MMMM D, YYYY');
+// "juillet 26, 2024"
+
+// Override for specific format
+date.format('MMMM D, YYYY', 'es-ES');
+// "julio 26, 2024"
+
+// With Intl options
+date.format({ dateStyle: 'full' });
+// "vendredi 26 juillet 2024"
+```
+
+## Using Plugins
+
+Extend Atemporal's functionality with plugins. Let's add relative time support:
+
+```javascript
+import atemporal from 'atemporal';
+import relativeTime from 'atemporal/plugins/relativeTime';
+
+// Extend once at app startup
+atemporal.extend(relativeTime);
+
+// Now use the new methods
+const fiveMinutesAgo = atemporal().subtract(5, 'minutes');
+console.log(fiveMinutesAgo.fromNow());
+// "5 minutes ago"
+
+const tomorrow = atemporal().add(1, 'day');
+console.log(tomorrow.fromNow());
+// "in a day"
+```
+
+### Popular Plugins
 
 <CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+  <Card title="relativeTime" icon="clock">
+    ```javascript
+    import relativeTime from 'atemporal/plugins/relativeTime';
+    atemporal.extend(relativeTime);
+    
+    atemporal().subtract(2, 'hours').fromNow();
+    // "2 hours ago"
+    ```
+  </Card>
+  
+  <Card title="customParseFormat" icon="file-code">
+    ```javascript
+    import customParseFormat from 'atemporal/plugins/customParseFormat';
+    atemporal.extend(customParseFormat);
+    
+    atemporal.fromFormat('25/12/2024', 'DD/MM/YYYY');
+    // Parse custom date formats
+    ```
+  </Card>
+  
+  <Card title="advancedFormat" icon="text">
+    ```javascript
+    import advancedFormat from 'atemporal/plugins/advancedFormat';
+    atemporal.extend(advancedFormat);
+    
+    atemporal('2024-07-26').format('Do [of] MMMM');
+    // "26th of July"
+    ```
+  </Card>
+  
+  <Card title="durationHumanizer" icon="hourglass">
+    ```javascript
+    import durationHumanizer from 'atemporal/plugins/durationHumanizer';
+    atemporal.extend(durationHumanizer);
+    
+    const duration = atemporal.duration({ hours: 5, minutes: 30 });
+    atemporal.humanize(duration);
+    // "5 hours, 30 minutes"
+    ```
+  </Card>
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+<Tip>
+  Check the Plugins section in the documentation for a complete list of available plugins and their features.
+</Tip>
+
+## Comparing Dates
+
+Atemporal provides methods to compare dates:
+
+```javascript
+const date1 = atemporal('2024-07-26');
+const date2 = atemporal('2024-08-01');
+
+// Comparison methods
+date1.isBefore(date2);     // true
+date1.isAfter(date2);      // false
+date1.isSame(date2);       // false
+
+// Compare with granularity
+date1.isSame(date2, 'month'); // true (same month)
+date1.isSame(date2, 'year');  // true (same year)
+
+// Between
+const target = atemporal('2024-07-28');
+target.isBetween(date1, date2); // true
+```
+
+## Calculating Differences
+
+Get the difference between two dates:
+
+```javascript
+const start = atemporal('2024-01-01');
+const end = atemporal('2024-07-26');
+
+// Get difference in specific units
+const days = end.diff(start, 'days');
+console.log(days); // 207
+
+const months = end.diff(start, 'months');
+console.log(months); // 6
+
+const hours = end.diff(start, 'hours');
+console.log(hours); // 4968
+```
+
+## Working Example
+
+Here's a complete example combining multiple features:
+
+```javascript
+import atemporal from 'atemporal';
+import relativeTime from 'atemporal/plugins/relativeTime';
+
+// Setup
+atemporal.extend(relativeTime);
+atemporal.setDefaultLocale('en-US');
+
+// Create a meeting scheduler
+const now = atemporal();
+const meeting = now
+  .add(2, 'days')
+  .set('hour', 14)
+  .set('minute', 30)
+  .set('second', 0);
+
+console.log('Meeting Details:');
+console.log('Date:', meeting.format('dddd, MMMM D, YYYY'));
+console.log('Time:', meeting.format('h:mm A'));
+console.log('Starts:', meeting.fromNow());
+console.log('Days until:', meeting.diff(now, 'days'));
+
+// Output:
+// Meeting Details:
+// Date: Sunday, March 6, 2026
+// Time: 2:30 PM
+// Starts: in 2 days
+// Days until: 2
+```
+
+## Validation
+
+Check if dates are valid:
+
+```javascript
+// Valid date
+const valid = atemporal('2024-07-26');
+console.log(valid.isValid()); // true
+
+// Invalid date
+const invalid = atemporal('invalid-date');
+console.log(invalid.isValid()); // false
+
+// Validate before operations
+if (valid.isValid()) {
+  console.log(valid.format('YYYY-MM-DD'));
+}
+
+// Static validation
+console.log(atemporal.isValid('2024-07-26'));    // true
+console.log(atemporal.isValid('not-a-date'));    // false
+```
+
+## Next Steps
+
+Now that you understand the basics, explore more advanced features:
+
+<CardGroup cols={2}>
+  <Card title="Core API" icon="code" href="/api/factory-functions">
+    Complete API reference for all core methods
+  </Card>
+  
+  <Card title="Plugins" icon="puzzle-piece" href="/plugins/relative-time">
+    Explore all available plugins and their features
+  </Card>
+  
+  <Card title="Time Zones" icon="globe" href="/concepts/time-zones">
+    Deep dive into time zone handling
+  </Card>
+  
+  <Card title="Formatting" icon="text" href="/concepts/formatting">
+    Master all formatting options and tokens
+  </Card>
+</CardGroup>

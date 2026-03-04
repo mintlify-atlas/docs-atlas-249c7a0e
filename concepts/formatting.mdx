@@ -1,0 +1,513 @@
+---
+title: Formatting
+description: Format dates with custom tokens, locales, and the high-performance formatting engine
+---
+
+## Overview
+
+Atemporal provides two powerful formatting approaches:
+
+1. **Token-based formatting** - Day.js-compatible format strings like `'YYYY-MM-DD'`
+2. **Intl.DateTimeFormat** - Native localization with full ICU support
+
+Both approaches leverage Atemporal's high-performance formatting engine with token compilation, caching, and fast-path optimization.
+
+## Token-Based Formatting
+
+### Basic Format Tokens
+
+Use format tokens to create custom date strings:
+
+```typescript
+import atemporal from 'atemporal';
+
+const date = atemporal('2024-07-16T15:30:45.123Z');
+
+// Date components
+date.format('YYYY-MM-DD');           // "2024-07-16"
+date.format('DD/MM/YYYY');           // "16/07/2024"
+date.format('MMM D, YYYY');          // "Jul 16, 2024"
+date.format('MMMM D, YYYY');         // "July 16, 2024"
+
+// Time components
+date.format('HH:mm:ss');             // "15:30:45"
+date.format('h:mm A');               // "3:30 PM"
+date.format('hh:mm:ss a');           // "03:30:45 pm"
+
+// Combined
+date.format('YYYY-MM-DD HH:mm:ss');  // "2024-07-16 15:30:45"
+date.format('MMM D [at] h:mm A');    // "Jul 16 at 3:30 PM"
+```
+
+### Complete Token Reference
+
+<Tabs>
+  <Tab title="Date Tokens">
+    | Token | Output | Description |
+    |-------|--------|-------------|
+    | `YYYY` | 2024 | 4-digit year |
+    | `YY` | 24 | 2-digit year |
+    | `MMMM` | January | Full month name |
+    | `MMM` | Jan | Abbreviated month name |
+    | `MM` | 01 | Month, 2-digits (01-12) |
+    | `M` | 1 | Month (1-12) |
+    | `DD` | 09 | Day of month, 2-digits (01-31) |
+    | `D` | 9 | Day of month (1-31) |
+    | `dddd` | Monday | Full weekday name |
+    | `ddd` | Mon | Short weekday name |
+    | `dd` | Mo | Min weekday name |
+    | `d` | 1 | Day of week (1-7, Monday=1) |
+  </Tab>
+  
+  <Tab title="Time Tokens">
+    | Token | Output | Description |
+    |-------|--------|-------------|
+    | `HH` | 15 | Hour, 24-hour, 2-digits (00-23) |
+    | `H` | 15 | Hour, 24-hour (0-23) |
+    | `hh` | 03 | Hour, 12-hour, 2-digits (01-12) |
+    | `h` | 3 | Hour, 12-hour (1-12) |
+    | `mm` | 05 | Minute, 2-digits (00-59) |
+    | `m` | 5 | Minute (0-59) |
+    | `ss` | 02 | Second, 2-digits (00-59) |
+    | `s` | 2 | Second (0-59) |
+    | `SSS` | 123 | Millisecond, 3-digits (000-999) |
+    | `A` | PM | AM/PM (uppercase) |
+    | `a` | pm | am/pm (lowercase) |
+  </Tab>
+  
+  <Tab title="Time Zone Tokens">
+    | Token | Output | Description |
+    |-------|--------|-------------|
+    | `Z` | +05:30 | UTC offset, ±HH:mm |
+    | `ZZ` | +0530 | UTC offset, ±HHmm |
+    | `z` | America/New_York | IANA time zone name |
+    | `zzz` | EST | Short time zone name |
+    | `zzzz` | Eastern Standard Time | Long time zone name |
+  </Tab>
+</Tabs>
+
+### Escaping Text
+
+Use square brackets to include literal text:
+
+```typescript
+const date = atemporal('2024-07-16T15:30:00Z');
+
+date.format('[Today is] dddd');
+// Output: "Today is Tuesday"
+
+date.format('YYYY-MM-DD [at] HH:mm');
+// Output: "2024-07-16 at 15:30"
+
+date.format('[The year] YYYY [has ended]');
+// Output: "The year 2024 has ended"
+```
+
+### Common Format Patterns
+
+<CodeGroup>
+```typescript ISO Formats
+date.format('YYYY-MM-DD');           // ISO date
+date.format('HH:mm:ss');             // ISO time
+date.format('YYYY-MM-DDTHH:mm:ss');  // ISO datetime
+date.format('YYYY-MM-DDTHH:mm:ssZ'); // ISO with offset
+```
+
+```typescript US Formats
+date.format('MM/DD/YYYY');           // 07/16/2024
+date.format('M/D/YY');               // 7/16/24
+date.format('MMM D, YYYY');          // Jul 16, 2024
+date.format('MMMM D, YYYY');         // July 16, 2024
+date.format('h:mm A');               // 3:30 PM
+```
+
+```typescript EU Formats
+date.format('DD/MM/YYYY');           // 16/07/2024
+date.format('D/M/YY');               // 16/7/24
+date.format('D MMM YYYY');           // 16 Jul 2024
+date.format('HH:mm');                // 15:30
+```
+
+```typescript Readable Formats
+date.format('dddd, MMMM D, YYYY');
+// "Tuesday, July 16, 2024"
+
+date.format('ddd, MMM D [at] h:mm A');
+// "Tue, Jul 16 at 3:30 PM"
+
+date.format('MMMM D, YYYY [at] h:mm:ss A z');
+// "July 16, 2024 at 3:30:45 PM America/New_York"
+```
+</CodeGroup>
+
+## Locale-Specific Formatting
+
+### Using Locales with Tokens
+
+Pass a locale code to format month and weekday names:
+
+```typescript
+import atemporal from 'atemporal';
+
+const date = atemporal('2024-07-16T15:30:00Z');
+
+// English (default)
+date.format('MMMM D, YYYY', 'en-US');
+// Output: "July 16, 2024"
+
+// French
+date.format('MMMM D, YYYY', 'fr-FR');
+// Output: "juillet 16, 2024"
+
+// Spanish
+date.format('dddd, D [de] MMMM [de] YYYY', 'es-ES');
+// Output: "martes, 16 de julio de 2024"
+
+// Japanese
+date.format('YYYY年M月D日 (ddd)', 'ja-JP');
+// Output: "2024年7月16日 (火)"
+
+// German
+date.format('dddd, D. MMMM YYYY', 'de-DE');
+// Output: "Dienstag, 16. Juli 2024"
+```
+
+### Setting Default Locale
+
+Set a global default locale:
+
+```typescript
+import atemporal from 'atemporal';
+
+// Set default locale
+atemporal.setDefaultLocale('fr-FR');
+
+// All formats use French by default
+const date = atemporal('2024-07-16');
+date.format('MMMM D, YYYY');
+// Output: "juillet 16, 2024"
+
+// Override per format
+date.format('MMMM D, YYYY', 'de-DE');
+// Output: "Juli 16, 2024"
+
+// Get current default
+const locale = atemporal.getDefaultLocale();
+console.log(locale); // "fr-FR"
+```
+
+### Validating Locales
+
+```typescript
+import atemporal from 'atemporal';
+
+atemporal.isValidLocale('en-US');    // true
+atemporal.isValidLocale('fr-FR');    // true
+atemporal.isValidLocale('invalid');  // false
+```
+
+## Intl.DateTimeFormat
+
+Use the native `Intl.DateTimeFormat` API for advanced localization:
+
+```typescript
+import atemporal from 'atemporal';
+
+const date = atemporal('2024-07-16T15:30:00', 'America/New_York');
+
+// Date styles
+date.format({ dateStyle: 'full' }, 'en-US');
+// Output: "Tuesday, July 16, 2024"
+
+date.format({ dateStyle: 'long' }, 'es-ES');
+// Output: "16 de julio de 2024"
+
+date.format({ dateStyle: 'medium' }, 'fr-FR');
+// Output: "16 juil. 2024"
+
+date.format({ dateStyle: 'short' }, 'de-DE');
+// Output: "16.07.24"
+
+// Time styles
+date.format({ timeStyle: 'full' }, 'en-US');
+// Output: "3:30:00 PM Eastern Daylight Time"
+
+date.format({ timeStyle: 'long' }, 'ja-JP');
+// Output: "15:30:00 アメリカ東部夏時間"
+
+// Combined
+date.format({ 
+  dateStyle: 'full', 
+  timeStyle: 'short' 
+}, 'en-US');
+// Output: "Tuesday, July 16, 2024 at 3:30 PM"
+```
+
+### Custom Intl Options
+
+```typescript
+const date = atemporal('2024-07-16T15:30:00Z');
+
+// Custom component options
+date.format({
+  weekday: 'long',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit'
+}, 'en-US');
+// Output: "Tuesday, July 16, 2024, 03:30 PM"
+
+// With time zone display
+date.format({
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+  timeZoneName: 'short'
+}, 'en-US');
+// Output: "July 16, 2024, 03:30 PM UTC"
+```
+
+## The Formatting Engine
+
+Atemporal uses a high-performance formatting engine with several optimizations:
+
+### Fast-Path Optimization
+
+Common patterns use optimized fast paths:
+
+```typescript
+const date = atemporal('2024-07-16T15:30:00Z');
+
+// These patterns use fast paths (no token compilation)
+date.format('YYYY-MM-DD');           // Fast path
+date.format('HH:mm:ss');             // Fast path
+date.format('YYYY-MM-DDTHH:mm:ss');  // Fast path
+date.format('MM/DD/YYYY');           // Fast path
+date.format('DD/MM/YYYY');           // Fast path
+```
+
+### Token Compilation and Caching
+
+Format strings are compiled and cached for reuse:
+
+```typescript
+import { TemporalWrapper } from 'atemporal';
+
+// First call compiles the format string
+date.format('MMMM D, YYYY [at] h:mm A');
+
+// Subsequent calls use cached compilation
+date.format('MMMM D, YYYY [at] h:mm A'); // Faster
+
+// Get metrics
+const metrics = TemporalWrapper.getFormattingMetrics();
+console.log(metrics);
+// Output:
+// {
+//   totalFormats: 150,
+//   cacheHits: 120,
+//   fastPathHits: 80,
+//   averageFormatTime: 0.15,
+//   compilationStats: {
+//     totalCompilations: 30,
+//     cacheHitRatio: 0.80,
+//     averageCompileTime: 0.05
+//   }
+// }
+```
+
+### Performance Monitoring
+
+<Steps>
+  <Step title="Get Metrics">
+    ```typescript
+    import { TemporalWrapper } from 'atemporal';
+    
+    const metrics = TemporalWrapper.getFormattingMetrics();
+    console.log(metrics);
+    ```
+  </Step>
+  
+  <Step title="Get Performance Report">
+    ```typescript
+    import { TemporalWrapper } from 'atemporal';
+    
+    const report = TemporalWrapper.getFormattingPerformanceReport();
+    console.log(report);
+    // Output:
+    // Formatting Performance Report:
+    // Total Formats: 250
+    // Average Format Time: 0.120ms
+    // Cache Hit Ratio: 85.20%
+    // Fast Path Hit Ratio: 45.60%
+    // Token Pool Stats:
+    //   - Total Tokens: 150
+    //   - Active Tokens: 45
+    //   - Pool Hit Ratio: 78.30%
+    ```
+  </Step>
+  
+  <Step title="Pre-warm System">
+    ```typescript
+    import { TemporalWrapper } from 'atemporal';
+    
+    // Pre-compile common patterns on app startup
+    TemporalWrapper.prewarmFormattingSystem();
+    ```
+  </Step>
+  
+  <Step title="Reset for Benchmarking">
+    ```typescript
+    import { TemporalWrapper } from 'atemporal';
+    
+    // Clear caches and reset metrics
+    TemporalWrapper.resetFormattingSystem();
+    ```
+  </Step>
+</Steps>
+
+## Formatting Configuration
+
+### Caching Options
+
+Control formatting cache behavior:
+
+```typescript
+const date = atemporal('2024-07-16');
+
+// Enable caching (default)
+date.format('YYYY-MM-DD', {
+  useCache: true
+});
+
+// Disable caching for unique formats
+date.format('YYYY-MM-DD', {
+  useCache: false
+});
+```
+
+### Token Pooling
+
+Token pooling reduces memory allocations:
+
+```typescript
+const date = atemporal('2024-07-16');
+
+// Enable token pooling (default)
+date.format('YYYY-MM-DD HH:mm:ss', {
+  poolTokens: true
+});
+
+// Disable for debugging
+date.format('YYYY-MM-DD HH:mm:ss', {
+  poolTokens: false
+});
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Use Fast-Path Patterns" icon="bolt">
+    Prefer common patterns like `'YYYY-MM-DD'` for best performance
+  </Card>
+  
+  <Card title="Pre-warm on Startup" icon="fire">
+    Call `prewarmFormattingSystem()` during app initialization
+  </Card>
+  
+  <Card title="Reuse Format Strings" icon="recycle">
+    Use the same format strings to benefit from caching
+  </Card>
+  
+  <Card title="Set Default Locale" icon="globe">
+    Set a default locale once rather than passing it to each format call
+  </Card>
+</CardGroup>
+
+### Recommended Patterns
+
+```typescript
+import atemporal, { TemporalWrapper } from 'atemporal';
+
+// Pre-warm system on app startup
+TemporalWrapper.prewarmFormattingSystem();
+
+// Set default locale
+atemporal.setDefaultLocale('en-US');
+
+// Define reusable format strings
+const FORMATS = {
+  ISO_DATE: 'YYYY-MM-DD',
+  US_DATE: 'MM/DD/YYYY',
+  READABLE: 'MMMM D, YYYY',
+  TIMESTAMP: 'YYYY-MM-DD HH:mm:ss'
+};
+
+// Use throughout your app
+const date = atemporal();
+const formatted = date.format(FORMATS.READABLE);
+```
+
+## Real-World Examples
+
+### User-Friendly Dates
+
+```typescript
+function formatUserFriendly(date: string, locale: string): string {
+  const d = atemporal(date);
+  return d.format('MMMM D, YYYY [at] h:mm A', locale);
+}
+
+formatUserFriendly('2024-07-16T15:30:00Z', 'en-US');
+// Output: "July 16, 2024 at 3:30 PM"
+```
+
+### API Response Formatting
+
+```typescript
+function formatAPIResponse(timestamp: number): {
+  iso: string;
+  display: string;
+  relative: string;
+} {
+  const date = atemporal(timestamp);
+  
+  return {
+    iso: date.format('YYYY-MM-DDTHH:mm:ssZ'),
+    display: date.format('MMM D, YYYY [at] h:mm A'),
+    relative: `${date.diff(atemporal(), 'day')} days ago`
+  };
+}
+```
+
+### Localized Date Picker
+
+```typescript
+function getMonthDays(year: number, month: number, locale: string): string[] {
+  const start = atemporal({ year, month, day: 1 });
+  const end = start.endOf('month');
+  
+  return start.range(end, 'day', {
+    format: 'D',
+    locale
+  });
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Time Zones" icon="globe" href="/concepts/time-zones">
+    Format dates with time zone information
+  </Card>
+  <Card title="Immutability" icon="lock" href="/concepts/immutability">
+    Understand how formatting preserves immutability
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/formatting-api">
+    Explore the complete formatting API
+  </Card>
+</CardGroup>

@@ -1,0 +1,611 @@
+---
+title: "Advanced Patterns"
+description: "Performance optimization, lazy loading plugins, custom plugin development, and best practices for Atemporal"
+---
+
+# Advanced Patterns
+
+Master advanced techniques to get the most out of Atemporal, from performance optimization to building custom plugins.
+
+## Performance Optimization
+
+Atemporal includes sophisticated caching and optimization strategies to deliver excellent performance.
+
+### Understanding Atemporal's Caching System
+
+Atemporal uses multiple specialized caches:
+
+- **Formatting Cache**: Stores compiled format patterns and results
+- **Parsing Cache**: Caches parsed date inputs
+- **Comparison Cache**: Optimizes repeated comparisons
+- **Intl Cache**: Caches `Intl` formatters for localization
+- **Relative Time Cache**: Stores relative time calculations
+
+### Cache Management
+
+<Tabs>
+  <Tab title="Global Cache Clearing">
+    ```typescript
+    import atemporal from 'atemporal';
+    import { GlobalCacheCoordinator } from 'atemporal';
+
+    // Clear all caches at once
+    GlobalCacheCoordinator.clearAll();
+
+    // Get cache statistics
+    const stats = GlobalCacheCoordinator.getAllStats();
+    console.log(stats);
+    // {
+    //   formatting: { size: 45, maxSize: 200 },
+    //   parsing: { size: 120, maxSize: 500 },
+    //   relativeTime: { size: 30, maxSize: 150 }
+    // }
+    ```
+  </Tab>
+
+  <Tab title="Plugin-Specific Caches">
+    ```typescript
+    import atemporal from 'atemporal';
+    import relativeTime from 'atemporal/plugins/relativeTime';
+
+    atemporal.extend(relativeTime);
+
+    // Clear only relative time cache
+    atemporal.clearRelativeTimeCache?.();
+
+    // Get relative time cache stats
+    const stats = atemporal.getRelativeTimeCacheStats?.();
+    console.log(stats);
+    ```
+  </Tab>
+</Tabs>
+
+### Performance Monitoring
+
+```typescript
+import { TemporalWrapper } from 'atemporal';
+
+// Get formatting performance metrics
+const metrics = TemporalWrapper.getFormattingMetrics();
+console.log(metrics);
+// {
+//   totalFormats: 1250,
+//   cacheHits: 980,
+//   cacheMisses: 270,
+//   hitRate: 0.784,
+//   averageTimeMs: 0.42
+// }
+
+// Get detailed performance report
+const report = TemporalWrapper.getFormattingReport();
+console.log(report);
+// Comprehensive report with cache statistics and recommendations
+```
+
+### Best Practices for Performance
+
+<AccordionGroup>
+  <Accordion title="Reuse Format Strings">
+    Atemporal caches compiled format patterns. Reusing the same format strings improves performance:
+
+    ```typescript
+    // ✅ Good - format string is reused and cached
+    const FORMAT = 'YYYY-MM-DD HH:mm:ss';
+    dates.map(d => atemporal(d).format(FORMAT));
+
+    // ❌ Avoid - creates new format string each time
+    dates.map(d => atemporal(d).format('YYYY-MM-DD HH:mm:ss'));
+    ```
+  </Accordion>
+
+  <Accordion title="Batch Operations Efficiently">
+    When processing many dates, consider using parsing strategies:
+
+    ```typescript
+    // For consistent input types, parsing is optimized
+    const timestamps = [1710504000, 1710590400, 1710676800];
+    
+    // Parsing cache will optimize repeated similar inputs
+    const dates = timestamps.map(ts => atemporal.unix(ts));
+    ```
+  </Accordion>
+
+  <Accordion title="Avoid Unnecessary Conversions">
+    ```typescript
+    // ❌ Avoid - unnecessary re-parsing
+    const date = atemporal('2024-03-15');
+    const formatted = date.format('YYYY-MM-DD');
+    const reparsed = atemporal(formatted); // Wasteful
+
+    // ✅ Better - work with the instance directly
+    const date = atemporal('2024-03-15');
+    const nextWeek = date.add(7, 'day');
+    const formatted = nextWeek.format('YYYY-MM-DD');
+    ```
+  </Accordion>
+
+  <Accordion title="Leverage Native Temporal Detection">
+    Atemporal automatically uses native Temporal API when available:
+
+    ```typescript
+    // Check which implementation is being used
+    const info = atemporal.getTemporalInfo();
+    console.log(info);
+    // {
+    //   isNative: true,
+    //   environment: 'node',
+    //   version: 'native'
+    // }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Lazy Loading Plugins
+
+Reduce your initial bundle size by loading plugins only when needed.
+
+### Why Lazy Load?
+
+<CardGroup cols={2}>
+  <Card title="Smaller Bundles" icon="compress">
+    Only ship code that users actually need
+  </Card>
+  <Card title="Faster Initial Load" icon="bolt">
+    Reduce time-to-interactive for your app
+  </Card>
+  <Card title="On-Demand Features" icon="puzzle-piece">
+    Load specialized features when required
+  </Card>
+  <Card title="Dynamic Imports" icon="download">
+    Perfect for code-splitting strategies
+  </Card>
+</CardGroup>
+
+### Basic Lazy Loading
+
+```typescript
+import atemporal from 'atemporal';
+
+// Check available plugins
+console.log(atemporal.getAvailablePlugins());
+// ['relativeTime', 'customParseFormat', 'advancedFormat', 'durationHumanizer', 
+//  'weekDay', 'dateRangeOverlap', 'businessDays', 'timeSlots']
+
+// Load a single plugin on demand
+await atemporal.lazyLoad('relativeTime');
+
+// Now you can use the plugin
+const ago = atemporal().subtract(2, 'hour').fromNow();
+console.log(ago); // "2 hours ago"
+```
+
+### Loading Multiple Plugins
+
+```typescript
+// Load multiple plugins at once
+await atemporal.lazyLoadMultiple([
+  'relativeTime',
+  'customParseFormat',
+  'advancedFormat'
+]);
+
+// With plugin-specific options
+await atemporal.lazyLoadMultiple(
+  ['businessDays', 'timeSlots'],
+  {
+    businessDays: { /* custom options */ },
+    timeSlots: { /* custom options */ }
+  }
+);
+```
+
+### Checking Plugin Status
+
+```typescript
+// Check if a plugin is loaded
+if (!atemporal.isPluginLoaded('relativeTime')) {
+  await atemporal.lazyLoad('relativeTime');
+}
+
+// Get list of loaded plugins
+console.log(atemporal.getLoadedPlugins());
+// ['relativeTime', 'customParseFormat']
+```
+
+### Lazy Loading Pattern for Apps
+
+<Tabs>
+  <Tab title="React Component">
+    ```tsx
+    import { useState, useEffect } from 'react';
+    import atemporal from 'atemporal';
+
+    function RelativeTimeDisplay({ date }: { date: Date }) {
+      const [loaded, setLoaded] = useState(false);
+      const [relativeTime, setRelativeTime] = useState('');
+
+      useEffect(() => {
+        async function loadPlugin() {
+          if (!atemporal.isPluginLoaded('relativeTime')) {
+            await atemporal.lazyLoad('relativeTime');
+          }
+          setLoaded(true);
+        }
+        loadPlugin();
+      }, []);
+
+      useEffect(() => {
+        if (loaded) {
+          const time = atemporal(date).fromNow();
+          setRelativeTime(time);
+        }
+      }, [date, loaded]);
+
+      return <span>{relativeTime || 'Loading...'}</span>;
+    }
+    ```
+  </Tab>
+
+  <Tab title="Vue Component">
+    ```vue
+    <template>
+      <span>{{ relativeTime }}</span>
+    </template>
+
+    <script setup>
+    import { ref, onMounted, watch } from 'vue';
+    import atemporal from 'atemporal';
+
+    const props = defineProps(['date']);
+    const loaded = ref(false);
+    const relativeTime = ref('Loading...');
+
+    onMounted(async () => {
+      if (!atemporal.isPluginLoaded('relativeTime')) {
+        await atemporal.lazyLoad('relativeTime');
+      }
+      loaded.value = true;
+      updateRelativeTime();
+    });
+
+    watch(() => props.date, () => {
+      if (loaded.value) updateRelativeTime();
+    });
+
+    function updateRelativeTime() {
+      relativeTime.value = atemporal(props.date).fromNow();
+    }
+    </script>
+    ```
+  </Tab>
+
+  <Tab title="Dynamic Route">
+    ```typescript
+    // Only load business day calculations on the scheduling route
+    async function handleScheduleRoute() {
+      // Lazy load when entering the schedule feature
+      await atemporal.lazyLoadMultiple([
+        'businessDays',
+        'timeSlots'
+      ]);
+
+      // Now use the plugins
+      const nextBusinessDay = atemporal()
+        .addBusinessDays(5);
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Custom Plugin Development
+
+Extend Atemporal with your own plugins for specialized functionality.
+
+### Plugin Structure
+
+Every plugin follows this pattern:
+
+```typescript
+import type { Plugin, AtemporalFactory } from 'atemporal';
+import { TemporalWrapper } from 'atemporal';
+
+// 1. Define the plugin function
+const myPlugin: Plugin = (
+  Atemporal: typeof TemporalWrapper,
+  atemporal: AtemporalFactory,
+  options?: any
+) => {
+  // 2. Extend TemporalWrapper prototype with instance methods
+  Atemporal.prototype.myMethod = function() {
+    // 'this' is the TemporalWrapper instance
+    return this.format('YYYY-MM-DD');
+  };
+
+  // 3. Add static methods to the factory (optional)
+  (atemporal as any).myStaticMethod = function() {
+    return atemporal();
+  };
+};
+
+// 4. Extend TypeScript types
+declare module 'atemporal/TemporalWrapper' {
+  interface TemporalWrapper {
+    myMethod(): string;
+  }
+}
+
+declare module 'atemporal/types' {
+  interface AtemporalFactory {
+    myStaticMethod?(): TemporalWrapper;
+  }
+}
+
+export default myPlugin;
+```
+
+### Example: Quarter Operations Plugin
+
+<Steps>
+  <Step title="Create the Plugin File">
+    ```typescript
+    // plugins/quarterOperations.ts
+    import type { Plugin, AtemporalFactory } from 'atemporal';
+    import { TemporalWrapper } from 'atemporal';
+
+    const quarterOperationsPlugin: Plugin = (
+      Atemporal: typeof TemporalWrapper,
+      atemporal: AtemporalFactory
+    ) => {
+      // Get the current quarter (1-4)
+      Atemporal.prototype.quarter = function(): number {
+        if (!this.isValid()) return NaN;
+        const month = this.month();
+        return Math.ceil(month / 3);
+      };
+
+      // Start of the current quarter
+      Atemporal.prototype.startOfQuarter = function(): TemporalWrapper {
+        if (!this.isValid()) return this;
+        const quarter = this.quarter();
+        const startMonth = (quarter - 1) * 3 + 1;
+        return this.set('month', startMonth).startOf('month');
+      };
+
+      // End of the current quarter
+      Atemporal.prototype.endOfQuarter = function(): TemporalWrapper {
+        if (!this.isValid()) return this;
+        const quarter = this.quarter();
+        const endMonth = quarter * 3;
+        return this.set('month', endMonth).endOf('month');
+      };
+
+      // Add quarters
+      Atemporal.prototype.addQuarters = function(amount: number): TemporalWrapper {
+        return this.add(amount * 3, 'month');
+      };
+    };
+
+    // Type definitions
+    declare module 'atemporal/TemporalWrapper' {
+      interface TemporalWrapper {
+        quarter(): number;
+        startOfQuarter(): TemporalWrapper;
+        endOfQuarter(): TemporalWrapper;
+        addQuarters(amount: number): TemporalWrapper;
+      }
+    }
+
+    export default quarterOperationsPlugin;
+    ```
+  </Step>
+
+  <Step title="Use Your Custom Plugin">
+    ```typescript
+    import atemporal from 'atemporal';
+    import quarterOperations from './plugins/quarterOperations';
+
+    // Extend with your plugin
+    atemporal.extend(quarterOperations);
+
+    // Use the new methods
+    const now = atemporal();
+    console.log(`Current quarter: Q${now.quarter()}`);
+    console.log(`Start: ${now.startOfQuarter().format('YYYY-MM-DD')}`);
+    console.log(`End: ${now.endOfQuarter().format('YYYY-MM-DD')}`);
+
+    // Add quarters
+    const nextQuarter = now.addQuarters(1);
+    console.log(`Next quarter: Q${nextQuarter.quarter()}`);
+    ```
+  </Step>
+</Steps>
+
+### Plugin Best Practices
+
+<AccordionGroup>
+  <Accordion title="Handle Invalid Instances">
+    Always check validity and return appropriate values:
+
+    ```typescript
+    Atemporal.prototype.myMethod = function() {
+      // Return early for invalid instances
+      if (!this.isValid()) {
+        return this; // or return null, NaN, 'Invalid Date', etc.
+      }
+
+      // Your logic here
+    };
+    ```
+  </Accordion>
+
+  <Accordion title="Maintain Immutability">
+    Never mutate the instance. Always return new instances or primitive values:
+
+    ```typescript
+    // ❌ Wrong - attempts mutation
+    Atemporal.prototype.badMethod = function() {
+      this._datetime = /* something */; // Error: readonly property
+    };
+
+    // ✅ Correct - returns new instance
+    Atemporal.prototype.goodMethod = function() {
+      return this.add(1, 'day'); // Returns new instance
+    };
+    ```
+  </Accordion>
+
+  <Accordion title="Use Caching for Expensive Operations">
+    ```typescript
+    import { LRUCache } from 'atemporal';
+
+    class MyPluginCache {
+      private static cache = new LRUCache<string, string>(100);
+
+      static get(key: string): string | undefined {
+        return this.cache.get(key);
+      }
+
+      static set(key: string, value: string): void {
+        this.cache.set(key, value);
+      }
+    }
+
+    const myPlugin: Plugin = (Atemporal, atemporal) => {
+      Atemporal.prototype.expensiveOperation = function() {
+        const key = this.toISOString();
+        const cached = MyPluginCache.get(key);
+        if (cached) return cached;
+
+        const result = /* expensive computation */;
+        MyPluginCache.set(key, result);
+        return result;
+      };
+    };
+    ```
+  </Accordion>
+
+  <Accordion title="Provide Type Definitions">
+    Always extend the TypeScript interfaces:
+
+    ```typescript
+    // For instance methods
+    declare module 'atemporal/TemporalWrapper' {
+      interface TemporalWrapper {
+        myMethod(param: string): number;
+      }
+    }
+
+    // For static/factory methods
+    declare module 'atemporal/types' {
+      interface AtemporalFactory {
+        myStaticMethod?(config: MyConfig): TemporalWrapper;
+      }
+    }
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Working with Durations
+
+Atemporal uses native `Temporal.Duration` objects for powerful duration handling.
+
+### Creating Durations
+
+```typescript
+import atemporal from 'atemporal';
+
+// Create a duration
+const duration = atemporal.duration({
+  years: 1,
+  months: 6,
+  days: 15,
+  hours: 3,
+  minutes: 30
+});
+
+// From ISO 8601 duration string
+const isoDuration = atemporal.duration('P1Y6M15DT3H30M');
+
+// Check if something is a duration
+if (atemporal.isDuration(duration)) {
+  console.log('This is a duration!');
+}
+```
+
+### Duration Arithmetic
+
+```typescript
+const date = atemporal('2024-03-15');
+const duration = atemporal.duration({ months: 3, days: 10 });
+
+// Add duration to a date
+const future = date.add(duration);
+
+// You can also use the shorthand
+const future2 = date.add(3, 'month').add(10, 'day');
+```
+
+### Humanizing Durations
+
+```typescript
+import atemporal from 'atemporal';
+import durationHumanizer from 'atemporal/plugins/durationHumanizer';
+
+atemporal.extend(durationHumanizer);
+
+const duration = atemporal.duration({ years: 2, months: 3, hours: 5 });
+
+// Default humanization
+console.log(atemporal.humanize(duration));
+// "2 years, 3 months, 5 hours"
+
+// With options
+console.log(atemporal.humanize(duration, {
+  locale: 'es',
+  unitDisplay: 'long',
+  maxUnits: 2
+}));
+// "2 años, 3 meses"
+```
+
+## Best Practices Summary
+
+<CardGroup cols={2}>
+  <Card title="Cache Awareness" icon="database">
+    Reuse format strings and leverage Atemporal's built-in caching for optimal performance.
+  </Card>
+  
+  <Card title="Lazy Load Strategically" icon="rocket">
+    Load plugins on-demand to minimize bundle size and improve initial load times.
+  </Card>
+  
+  <Card title="Immutability Always" icon="lock">
+    Remember that all operations return new instances. Capture return values.
+  </Card>
+  
+  <Card title="Type Safety" icon="shield-check">
+    Use TypeScript and provide type definitions for custom plugins.
+  </Card>
+  
+  <Card title="Validate Input" icon="check-circle">
+    Always check `isValid()` when working with user input or external data.
+  </Card>
+  
+  <Card title="Monitor Performance" icon="chart-line">
+    Use built-in metrics to identify bottlenecks and optimize hot paths.
+  </Card>
+</CardGroup>
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card title="Error Handling" icon="exclamation-triangle" href="/guides/error-handling">
+    Learn about Atemporal's error types and debugging strategies
+  </Card>
+  <Card title="API Reference" icon="book" href="/api/factory-functions">
+    Explore the complete API documentation
+  </Card>
+  <Card title="Plugin Reference" icon="plug" href="/plugins/relative-time">
+    See all available plugins and their APIs
+  </Card>
+</CardGroup>

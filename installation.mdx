@@ -1,0 +1,252 @@
+---
+title: Installation
+description: Install and set up Atemporal in your JavaScript or TypeScript project
+---
+
+## Package Installation
+
+Install Atemporal using your preferred package manager:
+
+<CodeGroup>
+
+```bash npm
+npm install atemporal
+```
+
+```bash yarn
+yarn add atemporal
+```
+
+```bash pnpm
+pnpm add atemporal
+```
+
+</CodeGroup>
+
+## Requirements
+
+<Info>
+  **Node.js 18 or higher** is required to use Atemporal. The library uses the Temporal API polyfill which requires modern JavaScript features.
+</Info>
+
+Atemporal has minimal dependencies:
+
+- `@js-temporal/polyfill` - Provides Temporal API support until native implementation is available in all environments
+
+### Browser Support
+
+Atemporal works in all modern browsers that support ES2020. The Temporal polyfill is automatically used until native Temporal support is available (expected in 2026).
+
+- Chrome/Edge 90+
+- Firefox 88+
+- Safari 14+
+- Node.js 18+
+
+## TypeScript Setup
+
+Atemporal is built with TypeScript and includes full type definitions out of the box. No additional `@types` packages are needed.
+
+### Basic Configuration
+
+Ensure your `tsconfig.json` includes these settings:
+
+```json tsconfig.json
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "node",
+    "lib": ["ES2020"],
+    "esModuleInterop": true,
+    "skipLibCheck": true
+  }
+}
+```
+
+### Type Imports
+
+Atemporal exports TypeScript types for all its public APIs:
+
+```typescript
+import atemporal, { 
+  Atemporal,           // The TemporalWrapper class type
+  DateInput,           // Valid input types for creating instances
+  TimeUnit,            // Time units like 'day', 'hour', etc.
+  Plugin,              // Plugin function type
+  DateRange,           // Date range type for range operations
+} from 'atemporal';
+
+// Create typed instances
+const now: Atemporal = atemporal();
+const input: DateInput = '2024-07-26';
+const date: Atemporal = atemporal(input);
+```
+
+## Verify Installation
+
+Create a simple test file to verify everything is working:
+
+<CodeGroup>
+
+```javascript index.js
+import atemporal from 'atemporal';
+
+const now = atemporal();
+console.log('Current time:', now.format('YYYY-MM-DD HH:mm:ss'));
+console.log('Installation successful!');
+```
+
+```typescript index.ts
+import atemporal from 'atemporal';
+import type { Atemporal } from 'atemporal';
+
+const now: Atemporal = atemporal();
+console.log('Current time:', now.format('YYYY-MM-DD HH:mm:ss'));
+console.log('Installation successful!');
+```
+
+</CodeGroup>
+
+Run the file:
+
+<CodeGroup>
+
+```bash Node.js
+node index.js
+```
+
+```bash TypeScript (ts-node)
+ts-node index.ts
+```
+
+```bash TypeScript (tsx)
+tsx index.ts
+```
+
+</CodeGroup>
+
+You should see output like:
+```
+Current time: 2026-03-04 14:23:45
+Installation successful!
+```
+
+## Module Systems
+
+Atemporal supports both ES Modules and CommonJS:
+
+<Tabs>
+  <Tab title="ES Modules (Recommended)">
+    ```javascript
+    import atemporal from 'atemporal';
+    import relativeTime from 'atemporal/plugins/relativeTime';
+    
+    atemporal.extend(relativeTime);
+    ```
+  </Tab>
+  <Tab title="CommonJS">
+    ```javascript
+    const atemporal = require('atemporal').default;
+    const relativeTime = require('atemporal/plugins/relativeTime').default;
+    
+    atemporal.extend(relativeTime);
+    ```
+  </Tab>
+</Tabs>
+
+## Bundle Size
+
+Atemporal is designed to be lightweight:
+
+- **Core library**: ~15KB (minified + gzipped)
+- **Temporal polyfill**: ~50KB (minified + gzipped)
+- **Each plugin**: 1-3KB (minified + gzipped)
+
+<Note>
+  When native Temporal support lands in browsers (expected 2026), the polyfill will no longer be needed, reducing the total bundle size significantly.
+</Note>
+
+## Installing Plugins
+
+Plugins are included in the main package and can be imported from subpaths:
+
+```javascript
+import atemporal from 'atemporal';
+import relativeTime from 'atemporal/plugins/relativeTime';
+import customParseFormat from 'atemporal/plugins/customParseFormat';
+import advancedFormat from 'atemporal/plugins/advancedFormat';
+import durationHumanizer from 'atemporal/plugins/durationHumanizer';
+import weekDay from 'atemporal/plugins/weekDay';
+import businessDays from 'atemporal/plugins/businessDays';
+import timeSlots from 'atemporal/plugins/timeSlots';
+import dateRangeOverlap from 'atemporal/plugins/dateRangeOverlap';
+
+// Extend with the plugins you need
+atemporal.extend(relativeTime);
+atemporal.extend(customParseFormat);
+```
+
+<Tip>
+  Only import and extend the plugins you actually use to keep your bundle size small. Plugins are tree-shakeable when using modern bundlers.
+</Tip>
+
+## Troubleshooting
+
+<AccordionGroup>
+  <Accordion title="Error: Cannot find module 'atemporal'">
+    Make sure you've installed the package:
+    ```bash
+    npm install atemporal
+    ```
+    
+    If using TypeScript, ensure `moduleResolution` is set to `"node"` in your `tsconfig.json`.
+  </Accordion>
+  
+  <Accordion title="Error: Temporal is not defined">
+    This usually means your Node.js version is too old. Atemporal requires Node.js 18 or higher.
+    
+    Check your version:
+    ```bash
+    node --version
+    ```
+    
+    Upgrade if necessary:
+    ```bash
+    nvm install 18
+    nvm use 18
+    ```
+  </Accordion>
+  
+  <Accordion title="TypeScript errors with Temporal types">
+    The Temporal API types come from `@js-temporal/polyfill`. Make sure your `tsconfig.json` includes:
+    ```json
+    {
+      "compilerOptions": {
+        "skipLibCheck": true
+      }
+    }
+    ```
+  </Accordion>
+  
+  <Accordion title="Plugin imports not working">
+    Make sure you're using the correct import path:
+    ```javascript
+    // Correct
+    import relativeTime from 'atemporal/plugins/relativeTime';
+    
+    // Incorrect
+    import relativeTime from 'atemporal/relativeTime';
+    ```
+    
+    For CommonJS, always access the `.default` export:
+    ```javascript
+    const relativeTime = require('atemporal/plugins/relativeTime').default;
+    ```
+  </Accordion>
+</AccordionGroup>
+
+## Next Steps
+
+<Card title="Quick Start Guide" icon="rocket" href="/quickstart">
+  Learn the basics and build your first date-time feature with Atemporal
+</Card>

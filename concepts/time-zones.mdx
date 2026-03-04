@@ -1,0 +1,396 @@
+---
+title: Time Zones
+description: Master time zone handling with IANA database support and seamless conversions
+---
+
+## Overview
+
+Atemporal provides first-class support for time zones through the IANA Time Zone Database. Every Atemporal instance internally uses `Temporal.ZonedDateTime`, ensuring accurate time zone conversions that account for daylight saving time and historical changes.
+
+<Note>
+  Time zones in Atemporal use IANA identifiers like `'America/New_York'` or `'Europe/London'`, not abbreviations like `'EST'` or `'GMT'`.
+</Note>
+
+## Setting Time Zones
+
+### Creating Dates in a Time Zone
+
+Specify a time zone when creating an instance:
+
+```typescript
+import atemporal from 'atemporal';
+
+// Create at current time in Tokyo
+const tokyoNow = atemporal(undefined, 'Asia/Tokyo');
+
+// Parse date string in New York time zone
+const nyDate = atemporal('2024-11-01T10:00:00', 'America/New_York');
+console.log(nyDate.format('YYYY-MM-DD HH:mm:ss Z'));
+// Output: 2024-11-01 10:00:00 -04:00
+```
+
+### Converting Between Time Zones
+
+The `.timeZone()` method converts an instant to a different time zone:
+
+```typescript
+// Start with UTC
+const utcDate = atemporal('2024-11-01T10:00:00Z');
+console.log(`UTC: ${utcDate.format('YYYY-MM-DD HH:mm:ss Z')}`);
+// Output: UTC: 2024-11-01 10:00:00 +00:00
+
+// Convert to Tokyo (UTC+9)
+const tokyoTime = utcDate.timeZone('Asia/Tokyo');
+console.log(`Tokyo: ${tokyoTime.format('YYYY-MM-DD HH:mm:ss Z')}`);
+// Output: Tokyo: 2024-11-01 19:00:00 +09:00
+
+// Convert to New York (UTC-5)
+const nyTime = utcDate.timeZone('America/New_York');
+console.log(`New York: ${nyTime.format('YYYY-MM-DD HH:mm:ss Z')}`);
+// Output: New York: 2024-11-01 06:00:00 -04:00
+```
+
+<Note>
+  The `.timeZone()` method returns a new instance representing the **same instant in time**, just displayed in a different time zone.
+</Note>
+
+### Default Time Zone
+
+Set a global default time zone for all new instances:
+
+```typescript
+import atemporal from 'atemporal';
+
+// Set default to Paris
+atemporal.setDefaultTimeZone('Europe/Paris');
+
+// New instances use the default
+const now = atemporal();
+console.log(now.timeZoneId);
+// Output: Europe/Paris
+
+// Reset to UTC
+atemporal.setDefaultTimeZone('UTC');
+```
+
+<Warning>
+  Setting a default time zone affects all instances created afterwards. Use with caution in shared codebases.
+</Warning>
+
+## IANA Time Zone Database
+
+Atemporal leverages the IANA Time Zone Database for accurate, location-based time zone handling.
+
+### Common Time Zone Identifiers
+
+<Tabs>
+  <Tab title="Americas">
+    ```typescript
+    'America/New_York'      // US Eastern
+    'America/Chicago'       // US Central
+    'America/Denver'        // US Mountain
+    'America/Los_Angeles'   // US Pacific
+    'America/Toronto'       // Canada Eastern
+    'America/Mexico_City'   // Mexico
+    'America/Sao_Paulo'     // Brazil
+    'America/Buenos_Aires'  // Argentina
+    ```
+  </Tab>
+  
+  <Tab title="Europe">
+    ```typescript
+    'Europe/London'         // UK
+    'Europe/Paris'          // France
+    'Europe/Berlin'         // Germany
+    'Europe/Madrid'         // Spain
+    'Europe/Rome'           // Italy
+    'Europe/Moscow'         // Russia
+    'Europe/Istanbul'       // Turkey
+    ```
+  </Tab>
+  
+  <Tab title="Asia/Pacific">
+    ```typescript
+    'Asia/Tokyo'            // Japan
+    'Asia/Shanghai'         // China
+    'Asia/Hong_Kong'        // Hong Kong
+    'Asia/Singapore'        // Singapore
+    'Asia/Dubai'            // UAE
+    'Asia/Kolkata'          // India
+    'Australia/Sydney'      // Australia East
+    'Pacific/Auckland'      // New Zealand
+    ```
+  </Tab>
+  
+  <Tab title="Special">
+    ```typescript
+    'UTC'                   // Coordinated Universal Time
+    'Etc/GMT'               // Same as UTC
+    'Etc/GMT+5'             // Fixed offset (5 hours behind UTC)
+    'Etc/GMT-5'             // Fixed offset (5 hours ahead of UTC)
+    ```
+  </Tab>
+</Tabs>
+
+### Validating Time Zones
+
+Check if a time zone identifier is valid:
+
+```typescript
+import atemporal from 'atemporal';
+
+atemporal.isValidTimeZone('America/New_York');  // true
+atemporal.isValidTimeZone('Asia/Tokyo');        // true
+atemporal.isValidTimeZone('Invalid/Zone');      // false
+atemporal.isValidTimeZone('EST');               // false (abbreviations not supported)
+```
+
+## Getting Time Zone Information
+
+### Time Zone Properties
+
+```typescript
+const date = atemporal('2024-11-01T10:00:00', 'America/New_York');
+
+// Get the IANA identifier
+console.log(date.timeZoneId);
+// Output: America/New_York
+
+// Also available via timeZoneName
+console.log(date.timeZoneName);
+// Output: America/New_York
+```
+
+### Formatting with Time Zone Information
+
+Include time zone details in formatted output:
+
+```typescript
+const date = atemporal('2024-11-01T15:00:00', 'America/New_York');
+
+// Full IANA name
+console.log(date.format('YYYY-MM-DD HH:mm z'));
+// Output: 2024-11-01 15:00 America/New_York
+
+// UTC offset
+console.log(date.format('YYYY-MM-DD HH:mm:ss Z'));
+// Output: 2024-11-01 15:00:00 -04:00
+
+// Compact offset
+console.log(date.format('YYYY-MM-DD HH:mm:ss ZZ'));
+// Output: 2024-11-01 15:00:00 -0400
+```
+
+## Daylight Saving Time
+
+Atemporal automatically handles DST transitions:
+
+```typescript
+import atemporal from 'atemporal';
+
+// Before DST ends (still in EDT, UTC-4)
+const beforeDST = atemporal('2024-11-02T01:00:00', 'America/New_York');
+console.log(beforeDST.format('YYYY-MM-DD HH:mm Z'));
+// Output: 2024-11-02 01:00 -04:00
+
+// After DST ends (now in EST, UTC-5)
+const afterDST = atemporal('2024-11-04T01:00:00', 'America/New_York');
+console.log(afterDST.format('YYYY-MM-DD HH:mm Z'));
+// Output: 2024-11-04 01:00 -05:00
+
+// Calculate difference across DST
+const diff = afterDST.diff(beforeDST, 'hour');
+console.log(diff); // 49 hours (includes the DST "fall back" hour)
+```
+
+<Note>
+  Time zone conversions automatically account for historical DST rules, including past changes to DST observance dates.
+</Note>
+
+## Real-World Examples
+
+### Scheduling Across Time Zones
+
+```typescript
+import atemporal from 'atemporal';
+
+// Schedule a meeting at 2 PM New York time
+const meetingNY = atemporal('2024-03-15T14:00:00', 'America/New_York');
+
+// Show time for different participants
+const meetingLondon = meetingNY.timeZone('Europe/London');
+const meetingTokyo = meetingNY.timeZone('Asia/Tokyo');
+
+console.log(`New York: ${meetingNY.format('HH:mm')}`);
+console.log(`London: ${meetingLondon.format('HH:mm')}`);
+console.log(`Tokyo: ${meetingTokyo.format('HH:mm (Day DD)')}`);
+// Output:
+// New York: 14:00
+// London: 18:00
+// Tokyo: 03:00 (Day 16)
+```
+
+### Converting UTC Timestamps
+
+```typescript
+import atemporal from 'atemporal';
+
+// API returns UTC timestamp
+const utcTimestamp = 1710511200000; // milliseconds since epoch
+
+// Display in user's local time zone
+const userTimeZone = 'America/Los_Angeles';
+const localTime = atemporal(utcTimestamp, userTimeZone);
+
+console.log(localTime.format('MMMM D, YYYY [at] h:mm A z'));
+// Output: March 15, 2024 at 10:00 AM America/Los_Angeles
+```
+
+### Finding Time Zone Offsets
+
+```typescript
+import atemporal from 'atemporal';
+
+const date = atemporal('2024-07-15T12:00:00Z');
+
+// Get offset for different zones
+const zones = ['America/New_York', 'Europe/Paris', 'Asia/Tokyo'];
+
+zones.forEach(zone => {
+  const converted = date.timeZone(zone);
+  console.log(`${zone}: ${converted.format('Z')}`);
+});
+// Output:
+// America/New_York: -04:00
+// Europe/Paris: +02:00
+// Asia/Tokyo: +09:00
+```
+
+## Time Zone Parsing Behavior
+
+### String with Offset
+
+When parsing strings with UTC offsets, Atemporal preserves the offset information:
+
+```typescript
+// String includes offset
+const withOffset = atemporal('2024-07-15T15:30:00-04:00');
+console.log(withOffset.format('YYYY-MM-DD HH:mm Z'));
+// Output: 2024-07-15 15:30:00 -04:00
+
+// Converting to another zone
+const inUTC = withOffset.timeZone('UTC');
+console.log(inUTC.format('YYYY-MM-DD HH:mm Z'));
+// Output: 2024-07-15 19:30:00 +00:00
+```
+
+### Object with Time Zone
+
+When creating from objects, time zone priority follows this order:
+
+1. Explicit time zone parameter
+2. Global default time zone (if set)
+3. Time zone property in the object
+4. UTC (fallback)
+
+```typescript
+import atemporal from 'atemporal';
+
+// Object with timeZone property
+const obj = {
+  year: 2024,
+  month: 7,
+  day: 15,
+  hour: 10,
+  timeZone: 'America/New_York'
+};
+
+// No explicit timezone parameter - uses object's timeZone
+const date1 = atemporal(obj);
+console.log(date1.timeZoneId); // America/New_York
+
+// Explicit timezone parameter overrides object's timeZone
+const date2 = atemporal(obj, 'Europe/Paris');
+console.log(date2.timeZoneId); // Europe/Paris
+```
+
+## Best Practices
+
+<Steps>
+  <Step title="Store in UTC">
+    Store dates in UTC in your database for consistency:
+    
+    ```typescript
+    const date = atemporal();
+    const utcDate = date.timeZone('UTC');
+    const isoString = utcDate.toString(); // Store this
+    ```
+  </Step>
+  
+  <Step title="Convert for Display">
+    Convert to the user's time zone only for display:
+    
+    ```typescript
+    const stored = atemporal('2024-07-15T19:30:00Z');
+    const userTZ = 'America/Chicago';
+    const display = stored.timeZone(userTZ);
+    console.log(display.format('MMMM D [at] h:mm A'));
+    ```
+  </Step>
+  
+  <Step title="Use IANA Identifiers">
+    Always use full IANA identifiers, never abbreviations:
+    
+    ```typescript
+    // Good
+    atemporal(date, 'America/New_York');
+    
+    // Bad - will throw error
+    // atemporal(date, 'EST');
+    ```
+  </Step>
+  
+  <Step title="Handle Invalid Zones">
+    Validate time zone identifiers before use:
+    
+    ```typescript
+    const userProvidedZone = 'Asia/Tokyo';
+    
+    if (atemporal.isValidTimeZone(userProvidedZone)) {
+      const date = atemporal(undefined, userProvidedZone);
+    } else {
+      console.error('Invalid time zone');
+    }
+    ```
+  </Step>
+</Steps>
+
+## Performance Considerations
+
+Time zone operations are optimized in Atemporal:
+
+- Time zone validations are cached
+- Conversion operations are highly efficient
+- The underlying Temporal API uses native implementations when available
+
+```typescript
+// Get time zone from existing instance (no conversion)
+const tz = date.timeZoneId; // Fast
+
+// Convert to new zone (creates new instance)
+const converted = date.timeZone('Asia/Tokyo'); // Still fast
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Formatting" icon="calendar" href="/concepts/formatting">
+    Learn how to format dates with time zone information
+  </Card>
+  <Card title="Working with Dates" icon="clock" href="/concepts/working-with-dates">
+    Master date creation, parsing, and manipulation
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/factory-functions">
+    Explore the complete Atemporal API
+  </Card>
+</CardGroup>

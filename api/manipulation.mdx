@@ -1,0 +1,349 @@
+---
+title: 'Manipulation Methods'
+description: 'Methods for adding, subtracting, and modifying date-time values'
+---
+
+# Manipulation Methods
+
+All manipulation methods return a new Atemporal instance, ensuring immutability.
+
+## .add()
+
+Returns a new instance with the specified duration added.
+
+```typescript
+add(duration: Temporal.Duration): TemporalWrapper
+add(value: number, unit: TimeUnit): TemporalWrapper
+```
+
+<ParamField path="duration" type="Temporal.Duration">
+  A Temporal.Duration object to add (first overload)
+</ParamField>
+
+<ParamField path="value" type="number">
+  The number of units to add (second overload)
+</ParamField>
+
+<ParamField path="unit" type="TimeUnit">
+  The unit of time to add: 'year'/'years'/'y', 'month'/'months', 'week'/'weeks'/'w', 'day'/'days'/'d', 'hour'/'hours'/'h', 'minute'/'minutes'/'m', 'second'/'seconds'/'s', 'millisecond'/'milliseconds'/'ms'
+</ParamField>
+
+<ResponseField name="return" type="TemporalWrapper">
+  A new Atemporal instance with the added duration
+</ResponseField>
+
+### Examples
+
+```typescript
+const date = atemporal('2024-01-15T10:00:00Z');
+
+// Add with number and unit
+const tomorrow = date.add(1, 'day');
+const nextWeek = date.add(7, 'days');
+const later = date.add(2, 'hours');
+
+// Add with Duration object
+const future = date.add(atemporal.duration({ days: 5, hours: 3 }));
+
+// Chain multiple additions
+const complex = date
+  .add(1, 'month')
+  .add(2, 'weeks')
+  .add(3, 'hours');
+```
+
+---
+
+## .subtract()
+
+Returns a new instance with the specified duration subtracted.
+
+```typescript
+subtract(duration: Temporal.Duration): TemporalWrapper
+subtract(value: number, unit: TimeUnit): TemporalWrapper
+```
+
+<ParamField path="duration" type="Temporal.Duration">
+  A Temporal.Duration object to subtract (first overload)
+</ParamField>
+
+<ParamField path="value" type="number">
+  The number of units to subtract (second overload)
+</ParamField>
+
+<ParamField path="unit" type="TimeUnit">
+  The unit of time to subtract
+</ParamField>
+
+<ResponseField name="return" type="TemporalWrapper">
+  A new Atemporal instance with the subtracted duration
+</ResponseField>
+
+### Examples
+
+```typescript
+const date = atemporal('2024-01-15T10:00:00Z');
+
+// Subtract with number and unit
+const yesterday = date.subtract(1, 'day');
+const lastMonth = date.subtract(1, 'month');
+const earlier = date.subtract(30, 'minutes');
+
+// Subtract with Duration object
+const past = date.subtract(atemporal.duration({ weeks: 2, days: 3 }));
+```
+
+---
+
+## .set()
+
+Returns a new instance with a specific unit of time set to a new value.
+
+```typescript
+set(unit: SettableUnit, value: number): TemporalWrapper
+```
+
+<ParamField path="unit" type="SettableUnit" required>
+  The unit to set: 'year', 'month', 'day', 'hour', 'minute', 'second', 'millisecond', or 'quarter'
+</ParamField>
+
+<ParamField path="value" type="number" required>
+  The new value for the unit
+</ParamField>
+
+<ResponseField name="return" type="TemporalWrapper">
+  A new Atemporal instance with the updated value
+</ResponseField>
+
+### Examples
+
+```typescript
+const date = atemporal('2024-01-15T10:30:45Z');
+
+// Set individual units
+const newYear = date.set('year', 2025);
+const newMonth = date.set('month', 6); // June
+const newDay = date.set('day', 1);
+const newHour = date.set('hour', 14); // 2 PM
+const newMinute = date.set('minute', 0);
+const newSecond = date.set('second', 0);
+
+// Set quarter (moves to start of that quarter)
+const q2 = date.set('quarter', 2); // April 1st
+
+// Chain multiple sets
+const midnight = date
+  .set('hour', 0)
+  .set('minute', 0)
+  .set('second', 0)
+  .set('millisecond', 0);
+```
+
+---
+
+## .startOf()
+
+Returns a new instance set to the start of a given unit of time.
+
+```typescript
+startOf(unit: 'year' | 'month' | 'week' | 'day' | 'hour' | 'minute' | 'second'): TemporalWrapper
+```
+
+<ParamField path="unit" type="string" required>
+  The unit to round down to: 'year', 'month', 'week', 'day', 'hour', 'minute', or 'second'
+</ParamField>
+
+<ResponseField name="return" type="TemporalWrapper">
+  A new Atemporal instance at the start of the unit
+</ResponseField>
+
+### Examples
+
+```typescript
+const date = atemporal('2024-06-15T14:30:45.500Z');
+
+date.startOf('year');   // 2024-01-01T00:00:00.000Z
+date.startOf('month');  // 2024-06-01T00:00:00.000Z
+date.startOf('week');   // 2024-06-10T00:00:00.000Z (Monday)
+date.startOf('day');    // 2024-06-15T00:00:00.000Z
+date.startOf('hour');   // 2024-06-15T14:00:00.000Z
+date.startOf('minute'); // 2024-06-15T14:30:00.000Z
+date.startOf('second'); // 2024-06-15T14:30:45.000Z
+```
+
+<Note>
+  `startOf('week')` assumes Monday as the start of the week (ISO 8601 standard).
+</Note>
+
+---
+
+## .endOf()
+
+Returns a new instance set to the end of a given unit of time.
+
+```typescript
+endOf(unit: 'year' | 'month' | 'week' | 'day' | 'hour' | 'minute' | 'second'): TemporalWrapper
+```
+
+<ParamField path="unit" type="string" required>
+  The unit to round up to: 'year', 'month', 'week', 'day', 'hour', 'minute', or 'second'
+</ParamField>
+
+<ResponseField name="return" type="TemporalWrapper">
+  A new Atemporal instance at the end of the unit
+</ResponseField>
+
+### Examples
+
+```typescript
+const date = atemporal('2024-06-15T14:30:45.500Z');
+
+date.endOf('year');   // 2024-12-31T23:59:59.999Z
+date.endOf('month');  // 2024-06-30T23:59:59.999Z
+date.endOf('week');   // 2024-06-16T23:59:59.999Z (Sunday)
+date.endOf('day');    // 2024-06-15T23:59:59.999Z
+date.endOf('hour');   // 2024-06-15T14:59:59.999Z
+date.endOf('minute'); // 2024-06-15T14:30:59.999Z
+date.endOf('second'); // 2024-06-15T14:30:45.999Z
+```
+
+---
+
+## .clone()
+
+Creates a deep copy of the Atemporal instance.
+
+```typescript
+clone(): TemporalWrapper
+```
+
+<ResponseField name="return" type="TemporalWrapper">
+  A new, identical Atemporal instance
+</ResponseField>
+
+### Examples
+
+```typescript
+const original = atemporal('2024-01-15T10:00:00Z');
+const copy = original.clone();
+
+// Modifications don't affect the original
+const modified = copy.add(1, 'day');
+console.log(original.format('YYYY-MM-DD')); // 2024-01-15
+console.log(modified.format('YYYY-MM-DD'));  // 2024-01-16
+```
+
+<Note>
+  All Atemporal methods return new instances, so explicit cloning is rarely necessary.
+</Note>
+
+---
+
+## .timeZone()
+
+Returns a new instance with the time zone changed to the specified IANA time zone.
+
+```typescript
+timeZone(tz: string): TemporalWrapper
+```
+
+<ParamField path="tz" type="string" required>
+  The target IANA time zone string (e.g., 'America/New_York', 'Europe/London', 'Asia/Tokyo')
+</ParamField>
+
+<ResponseField name="return" type="TemporalWrapper">
+  A new Atemporal instance in the new time zone
+</ResponseField>
+
+### Examples
+
+```typescript
+const utcDate = atemporal('2024-01-15T10:00:00Z');
+
+// Convert to different timezones
+const nyDate = utcDate.timeZone('America/New_York');
+const londonDate = utcDate.timeZone('Europe/London');
+const tokyoDate = utcDate.timeZone('Asia/Tokyo');
+
+console.log(utcDate.format('YYYY-MM-DD HH:mm z'));    // 2024-01-15 10:00 UTC
+console.log(nyDate.format('YYYY-MM-DD HH:mm z'));     // 2024-01-15 05:00 America/New_York
+console.log(londonDate.format('YYYY-MM-DD HH:mm z')); // 2024-01-15 10:00 Europe/London
+console.log(tokyoDate.format('YYYY-MM-DD HH:mm z'));  // 2024-01-15 19:00 Asia/Tokyo
+```
+
+---
+
+## .dayOfWeek()
+
+Gets or sets the day of the week.
+
+```typescript
+dayOfWeek(): number
+dayOfWeek(day: number): TemporalWrapper
+```
+
+<ParamField path="day" type="number" optional>
+  The target day of the week (1-7, where 1=Monday, 7=Sunday)
+</ParamField>
+
+<ResponseField name="return" type="number | TemporalWrapper">
+  - Without parameter: Returns the day of the week as a number (1-7)
+  - With parameter: Returns a new instance adjusted to the specified day
+</ResponseField>
+
+### Examples
+
+```typescript
+const date = atemporal('2024-08-14'); // A Wednesday
+
+// Get day of week
+console.log(date.dayOfWeek()); // 3 (Wednesday)
+
+// Set day of week
+const monday = date.dayOfWeek(1);  // 2024-08-12 (Monday)
+const friday = date.dayOfWeek(5);  // 2024-08-16 (Friday)
+const sunday = date.dayOfWeek(7);  // 2024-08-18 (Sunday)
+```
+
+---
+
+## .quarter()
+
+Gets or sets the quarter of the year.
+
+```typescript
+quarter(): number
+quarter(quarter: number): TemporalWrapper
+```
+
+<ParamField path="quarter" type="number" optional>
+  The target quarter (1-4)
+</ParamField>
+
+<ResponseField name="return" type="number | TemporalWrapper">
+  - Without parameter: Returns the quarter as a number (1-4)
+  - With parameter: Returns a new instance set to the start of that quarter
+</ResponseField>
+
+### Examples
+
+```typescript
+const date = atemporal('2024-08-15');
+
+// Get quarter
+console.log(date.quarter()); // 3 (Q3)
+
+// Set quarter (moves to start of quarter)
+const q1 = date.quarter(1); // 2024-01-01
+const q2 = date.quarter(2); // 2024-04-01
+const q3 = date.quarter(3); // 2024-07-01
+const q4 = date.quarter(4); // 2024-10-01
+```
+
+---
+
+## Related
+
+- [Factory Functions](/api/factory-functions) - Create Atemporal instances
+- [Querying Methods](/api/querying) - Compare and query dates
+- [Formatting API](/api/formatting-api) - Format dates for display

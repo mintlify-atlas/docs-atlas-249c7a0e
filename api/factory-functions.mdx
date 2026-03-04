@@ -1,0 +1,194 @@
+---
+title: 'Factory Functions'
+description: 'Create Atemporal instances with factory functions for various date inputs'
+---
+
+# Factory Functions
+
+Factory functions provide various ways to create Atemporal instances from different input types.
+
+## atemporal()
+
+The primary factory function for creating Atemporal instances.
+
+```typescript
+atemporal(input?: DateInput, timeZone?: string): TemporalWrapper
+```
+
+<ParamField path="input" type="DateInput" optional>
+  The date/time input. Can be:
+  - `string` - ISO 8601 date string
+  - `number` - Unix timestamp in milliseconds
+  - `Date` - JavaScript Date object
+  - `Temporal.ZonedDateTime` - Native Temporal object
+  - `Temporal.PlainDateTime` - Plain date-time object
+  - `TemporalWrapper` - Another Atemporal instance
+  - `PlainDateTimeObject` - Plain object with date components
+  - `number[]` - Array of date components
+  - `FirebaseTimestampLike` - Firebase Timestamp object
+  - `undefined` or `null` - Current time (default)
+</ParamField>
+
+<ParamField path="timeZone" type="string" optional>
+  IANA time zone identifier (e.g., 'America/New_York'). Defaults to 'UTC'.
+</ParamField>
+
+<ResponseField name="return" type="TemporalWrapper">
+  A new Atemporal instance
+</ResponseField>
+
+### Examples
+
+```typescript
+import atemporal from 'atemporal';
+
+// Current time in UTC
+const now = atemporal();
+
+// From ISO string
+const date1 = atemporal('2024-01-15T10:30:00Z');
+
+// From timestamp
+const date2 = atemporal(1705318200000);
+
+// With timezone
+const date3 = atemporal('2024-01-15', 'America/New_York');
+
+// From Date object
+const date4 = atemporal(new Date());
+
+// From plain object
+const date5 = atemporal({ year: 2024, month: 1, day: 15, hour: 10 });
+
+// Clone existing instance
+const date6 = atemporal(date1);
+
+// Clone with different timezone
+const date7 = atemporal(date1, 'Europe/London');
+```
+
+---
+
+## atemporal.from()
+
+Creates a new Atemporal instance from various input types. Identical to calling `atemporal()` directly.
+
+```typescript
+atemporal.from(input: DateInput, tz?: string): TemporalWrapper
+```
+
+<ParamField path="input" type="DateInput" required>
+  The date/time input to parse
+</ParamField>
+
+<ParamField path="tz" type="string" optional>
+  IANA time zone identifier
+</ParamField>
+
+<ResponseField name="return" type="TemporalWrapper">
+  A new Atemporal instance
+</ResponseField>
+
+### Examples
+
+```typescript
+const date1 = atemporal.from('2024-01-15T10:30:00Z');
+const date2 = atemporal.from(1705318200000, 'America/Los_Angeles');
+const date3 = atemporal.from({ year: 2024, month: 1, day: 15 });
+```
+
+---
+
+## atemporal.unix()
+
+Creates an Atemporal instance from a Unix timestamp in **seconds** since epoch.
+
+```typescript
+atemporal.unix(timestampInSeconds: number): TemporalWrapper
+```
+
+<ParamField path="timestampInSeconds" type="number" required>
+  The number of seconds since 1970-01-01T00:00:00Z
+</ParamField>
+
+<ResponseField name="return" type="TemporalWrapper">
+  A new Atemporal instance
+</ResponseField>
+
+### Examples
+
+```typescript
+// From Unix timestamp (seconds)
+const date1 = atemporal.unix(1705318200);
+
+// Equivalent to:
+const date2 = atemporal(1705318200 * 1000);
+
+// Current Unix timestamp
+const now = atemporal.unix(Math.floor(Date.now() / 1000));
+```
+
+<Note>
+  `atemporal.unix()` expects **seconds**, while `atemporal()` with a number expects **milliseconds**.
+</Note>
+
+---
+
+## atemporal.duration()
+
+Creates a `Temporal.Duration` object from a duration-like input or ISO 8601 duration string.
+
+```typescript
+atemporal.duration(durationLike: Temporal.DurationLike | string): Temporal.Duration
+```
+
+<ParamField path="durationLike" type="Temporal.DurationLike | string" required>
+  Duration input. Can be:
+  - Object with duration properties (years, months, days, hours, etc.)
+  - ISO 8601 duration string (e.g., 'P1Y2M3D', 'PT2H30M')
+</ParamField>
+
+<ResponseField name="return" type="Temporal.Duration">
+  A Temporal.Duration object
+</ResponseField>
+
+### Examples
+
+```typescript
+// From object
+const duration1 = atemporal.duration({ hours: 2, minutes: 30 });
+const duration2 = atemporal.duration({ days: 5, hours: 3 });
+
+// From ISO 8601 string
+const duration3 = atemporal.duration('P1Y2M3D'); // 1 year, 2 months, 3 days
+const duration4 = atemporal.duration('PT2H30M'); // 2 hours, 30 minutes
+
+// Use with add/subtract
+const future = atemporal().add(atemporal.duration({ days: 7 }));
+const past = atemporal().subtract(atemporal.duration('P1M')); // 1 month ago
+```
+
+### Duration Properties
+
+```typescript
+interface DurationLike {
+  years?: number;
+  months?: number;
+  weeks?: number;
+  days?: number;
+  hours?: number;
+  minutes?: number;
+  seconds?: number;
+  milliseconds?: number;
+  microseconds?: number;
+  nanoseconds?: number;
+}
+```
+
+---
+
+## Related
+
+- [Manipulation Methods](/api/manipulation) - Add, subtract, and modify dates
+- [Querying Methods](/api/querying) - Compare and query dates
+- [Utilities](/api/utilities) - Static utility functions

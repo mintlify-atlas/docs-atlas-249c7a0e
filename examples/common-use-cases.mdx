@@ -1,0 +1,660 @@
+---
+title: "Common Use Cases"
+description: "Real-world examples and practical use cases for the Atemporal library"
+---
+
+This guide provides practical examples for common date-time operations you'll encounter in real-world applications.
+
+## Formatting Dates for Display
+
+<Accordion title="Display dates in different formats">
+
+Format dates for user interfaces, reports, or data exports:
+
+```typescript
+import atemporal from 'atemporal';
+
+const date = atemporal('2024-07-26T15:30:00Z');
+
+// Standard formats
+date.format('YYYY-MM-DD');              // "2024-07-26"
+date.format('DD/MM/YYYY');              // "26/07/2024"
+date.format('dddd, DD/MM/YYYY');        // "Friday, 26/07/2024"
+date.format('YYYY-MM-DD HH:mm:ss');     // "2024-07-26 15:30:00"
+
+// Localized formatting using Intl.DateTimeFormat
+atemporal.setDefaultLocale('fr-FR');
+date.format({ dateStyle: 'long', timeStyle: 'short' });
+// "26 juillet 2024 à 15:30"
+
+atemporal.setDefaultLocale('en-US');
+date.format({ dateStyle: 'full' });
+// "Friday, July 26, 2024"
+```
+
+<Note>
+Use Intl.DateTimeFormat options for localized formatting that automatically adapts to different languages and regions.
+</Note>
+
+</Accordion>
+
+<Accordion title="Format with ordinals and advanced tokens">
+
+The `advancedFormat` plugin adds support for ordinals and other advanced formatting tokens:
+
+```typescript
+import atemporal from 'atemporal';
+import advancedFormatPlugin from 'atemporal/plugins/advancedFormat';
+
+atemporal.extend(advancedFormatPlugin);
+
+const date = atemporal('2024-08-15');
+
+// Ordinal day formatting
+date.format('Do [of] MMMM, YYYY');      // "15th of August, 2024"
+date.format('MMMM Do, YYYY');           // "August 15th, 2024"
+
+// Ordinal quarter
+date.format('Qo [Quarter]');            // "3rd Quarter"
+
+// Localized ordinals
+date.format('Do [de] MMMM [de] YYYY', 'es');
+// "15º de agosto de 2024"
+```
+
+**Available advanced tokens:**
+- `Do` - Day of month with ordinal (1st, 2nd, 3rd, etc.)
+- `Qo` - Quarter with ordinal (1st, 2nd, 3rd, 4th)
+- `zzz` - Short timezone name (e.g., "PST")
+- `zzzz` - Long timezone name (e.g., "Pacific Standard Time")
+
+</Accordion>
+
+## Calculating Time Differences
+
+<Accordion title="Calculate duration between dates">
+
+Find the difference between two dates in any time unit:
+
+```typescript
+import atemporal from 'atemporal';
+
+const start = atemporal('2024-01-15');
+const end = atemporal('2024-03-22');
+
+// Get difference in various units
+const days = start.diff(end, 'day');           // 67 days
+const weeks = start.diff(end, 'week');         // ~9 weeks
+const months = start.diff(end, 'month');       // ~2 months
+
+// Precise differences with decimals
+const preciseMonths = start.diff(end, 'month', true);  // 2.23333...
+const preciseYears = start.diff(end, 'year', true);    // 0.186...
+
+// Working with time units
+const meeting = atemporal('2024-03-20T14:00:00');
+const now = atemporal('2024-03-20T15:45:30');
+
+const hours = meeting.diff(now, 'hour');       // 1
+const minutes = meeting.diff(now, 'minute');   // 105
+const seconds = meeting.diff(now, 'second');   // 6330
+```
+
+</Accordion>
+
+<Accordion title="Humanize durations">
+
+Convert durations into human-readable strings:
+
+```typescript
+import atemporal from 'atemporal';
+import durationHumanizerPlugin from 'atemporal/plugins/durationHumanizer';
+
+atemporal.extend(durationHumanizerPlugin);
+
+// Create durations
+const duration1 = atemporal.duration({ years: 2, months: 3, hours: 5 });
+atemporal.humanize(duration1);
+// "2 years, 3 months, 5 hours"
+
+const duration2 = atemporal.duration({ hours: 3, minutes: 45 });
+atemporal.humanize(duration2);
+// "3 hours, 45 minutes"
+
+// Localized humanization
+const options = { locale: 'es', unitDisplay: 'long' };
+atemporal.humanize(duration1, options);
+// "2 años, 3 meses, 5 horas"
+
+// Short format
+const shortOptions = { locale: 'en', unitDisplay: 'short' };
+atemporal.humanize(duration2, shortOptions);
+// "3 hr, 45 min"
+```
+
+</Accordion>
+
+## Working with Time Zones
+
+<Accordion title="Schedule meetings across time zones">
+
+Convert times between different time zones for global scheduling:
+
+```typescript
+import atemporal from 'atemporal';
+
+// Create a meeting time in New York
+const meetingNY = atemporal('2024-11-01T10:00:00', 'America/New_York');
+console.log(meetingNY.format('YYYY-MM-DD HH:mm:ss Z'));
+// "2024-11-01 10:00:00 -04:00"
+
+// What time is this in Tokyo?
+const meetingTokyo = meetingNY.timeZone('Asia/Tokyo');
+console.log(meetingTokyo.format('YYYY-MM-DD HH:mm:ss Z'));
+// "2024-11-01 23:00:00 +09:00"
+
+// What time is this in London?
+const meetingLondon = meetingNY.timeZone('Europe/London');
+console.log(meetingLondon.format('YYYY-MM-DD HH:mm:ss Z'));
+// "2024-11-01 14:00:00 +00:00"
+
+// Convert to UTC for storage
+const meetingUTC = meetingNY.timeZone('UTC');
+console.log(meetingUTC.toISOString());
+// "2024-11-01T14:00:00.000Z"
+```
+
+<Note>
+Always store dates in UTC and convert to local time zones only for display. This prevents ambiguity around daylight saving time transitions.
+</Note>
+
+</Accordion>
+
+<Accordion title="Set default time zone for your app">
+
+Configure a default time zone for all date operations:
+
+```typescript
+import atemporal from 'atemporal';
+
+// Set default timezone for the entire application
+atemporal.setDefaultTimeZone('Europe/Paris');
+
+// All new dates will use Paris timezone
+const now = atemporal();
+console.log(now.toString());
+// Shows current time in Paris timezone
+
+// Specific dates also use the default
+const event = atemporal('2024-12-25T12:00:00');
+console.log(event.format('YYYY-MM-DD HH:mm Z'));
+// "2024-12-25 12:00 +01:00" (Paris timezone)
+
+// Reset to UTC when needed
+atemporal.setDefaultTimeZone('UTC');
+```
+
+</Accordion>
+
+## Relative Time Display
+
+<Accordion title="Show 'time ago' labels">
+
+Display human-friendly relative times like "2 hours ago" or "in 3 days":
+
+```typescript
+import atemporal from 'atemporal';
+import relativeTimePlugin from 'atemporal/plugins/relativeTime';
+
+atemporal.extend(relativeTimePlugin);
+
+// Past times
+const twoHoursAgo = atemporal().subtract(2, 'hour');
+twoHoursAgo.fromNow();  // "2 hours ago"
+
+const yesterday = atemporal().subtract(1, 'day');
+yesterday.fromNow();    // "1 day ago"
+
+const lastWeek = atemporal().subtract(7, 'day');
+lastWeek.fromNow();     // "7 days ago"
+
+// Future times
+const inThreeDays = atemporal().add(3, 'day');
+inThreeDays.fromNow();  // "in 3 days"
+
+const nextMonth = atemporal().add(1, 'month');
+nextMonth.fromNow();    // "in 1 month"
+
+// Without suffix/prefix
+twoHoursAgo.fromNow(true);  // "2 hours"
+inThreeDays.fromNow(true);  // "3 days"
+
+// Inverse: time from now to the instance
+const future = atemporal().add(2, 'hour');
+future.toNow();         // "2 hours ago"
+```
+
+</Accordion>
+
+<Accordion title="Auto-updating timestamps">
+
+Create live-updating relative timestamps for social media or chat apps:
+
+```typescript
+import atemporal from 'atemporal';
+import relativeTimePlugin from 'atemporal/plugins/relativeTime';
+
+atemporal.extend(relativeTimePlugin);
+
+function updateTimestamp(element: HTMLElement, timestamp: string) {
+  const date = atemporal(timestamp);
+  element.textContent = date.fromNow();
+}
+
+// Update every minute
+const timestampElement = document.getElementById('post-time');
+const postTime = '2024-03-20T14:30:00Z';
+
+updateTimestamp(timestampElement, postTime);
+
+setInterval(() => {
+  updateTimestamp(timestampElement, postTime);
+}, 60000); // Update every 60 seconds
+```
+
+</Accordion>
+
+## Business Day Calculations
+
+<Accordion title="Calculate business days">
+
+Work with business days, excluding weekends and holidays:
+
+```typescript
+import atemporal from 'atemporal';
+import businessDaysPlugin from 'atemporal/plugins/businessDays';
+
+atemporal.extend(businessDaysPlugin);
+
+// Configure holidays (e.g., US holidays for 2024)
+atemporal.setBusinessDaysConfig({
+  holidays: [
+    '2024-01-01', // New Year's Day
+    '2024-07-04', // Independence Day
+    '2024-12-25', // Christmas
+  ],
+  weekendDays: [6, 7] // Saturday and Sunday (default)
+});
+
+const today = atemporal('2024-06-14'); // A Friday
+
+// Check if it's a business day
+today.isBusinessDay();          // true
+today.isWeekend();              // false
+
+const saturday = atemporal('2024-06-15');
+saturday.isBusinessDay();       // false
+saturday.isWeekend();           // true
+
+// Add business days
+const deadline = today.addBusinessDays(5);
+console.log(deadline.format('YYYY-MM-DD dddd'));
+// "2024-06-21 Friday" (skips weekend)
+
+// Subtract business days
+const startDate = today.subtractBusinessDays(3);
+console.log(startDate.format('YYYY-MM-DD dddd'));
+// "2024-06-11 Tuesday"
+
+// Get next business day
+const nextWorkday = saturday.nextBusinessDay();
+console.log(nextWorkday.format('YYYY-MM-DD dddd'));
+// "2024-06-17 Monday"
+```
+
+</Accordion>
+
+<Accordion title="Custom weekend configuration">
+
+Configure custom weekend days for different regions:
+
+```typescript
+import atemporal from 'atemporal';
+import businessDaysPlugin from 'atemporal/plugins/businessDays';
+
+atemporal.extend(businessDaysPlugin);
+
+// Middle East: Friday-Saturday weekend
+atemporal.setBusinessDaysConfig({
+  weekendDays: [5, 6], // Friday and Saturday
+  holidays: ['2024-04-10', '2024-06-15'] // Eid and other holidays
+});
+
+const date = atemporal('2024-06-14'); // Thursday
+date.isBusinessDay();  // true
+
+const friday = atemporal('2024-06-14').add(1, 'day');
+friday.isBusinessDay(); // false (weekend in this config)
+```
+
+</Accordion>
+
+## Date Range Operations
+
+<Accordion title="Generate date ranges">
+
+Create arrays of dates between two points:
+
+```typescript
+import atemporal from 'atemporal';
+
+const start = atemporal('2024-04-28'); // Sunday
+const end = atemporal('2024-05-02');   // Thursday
+
+// Generate daily range (inclusive by default)
+const dailyRange = start.range(end, 'day');
+console.log(dailyRange.map(d => d.format('YYYY-MM-DD dddd')));
+// [
+//   '2024-04-28 Sunday',
+//   '2024-04-29 Monday',
+//   '2024-04-30 Tuesday',
+//   '2024-05-01 Wednesday',
+//   '2024-05-02 Thursday'
+// ]
+
+// Exclusive end [)
+const exclusiveRange = start.range(end, 'day', { inclusivity: '[)' });
+console.log(exclusiveRange.map(d => d.format('YYYY-MM-DD')));
+// ['2024-04-28', '2024-04-29', '2024-04-30', '2024-05-01']
+
+// Get formatted strings directly
+const formattedRange = start.range(end, 'day', {
+  format: 'dddd, MMMM Do'
+});
+console.log(formattedRange);
+// ['Sunday, April 28th', 'Monday, April 29th', ...]
+```
+
+</Accordion>
+
+<Accordion title="Weekly and monthly ranges">
+
+Generate ranges with different intervals:
+
+```typescript
+import atemporal from 'atemporal';
+import advancedFormatPlugin from 'atemporal/plugins/advancedFormat';
+
+atemporal.extend(advancedFormatPlugin);
+
+// Weekly range
+const yearStart = atemporal('2024-01-01');
+const janEnd = atemporal('2024-01-28');
+
+const weeklyRange = yearStart.range(janEnd, 'week', {
+  format: '[Week starting] YYYY-MM-DD'
+});
+console.log(weeklyRange);
+// [
+//   'Week starting 2024-01-01',
+//   'Week starting 2024-01-08',
+//   'Week starting 2024-01-15',
+//   'Week starting 2024-01-22'
+// ]
+
+// Monthly range for a year
+const q1Start = atemporal('2024-01-01');
+const q4End = atemporal('2024-12-31');
+
+const monthlyRange = q1Start.range(q4End, 'month')
+  .map(d => d.format('MMMM YYYY'));
+console.log(monthlyRange);
+// ['January 2024', 'February 2024', ..., 'December 2024']
+```
+
+</Accordion>
+
+## Schedule and Calendar Operations
+
+<Accordion title="Check date range overlaps">
+
+Detect if two date ranges overlap:
+
+```typescript
+import atemporal from 'atemporal';
+import dateRangeOverlapPlugin from 'atemporal/plugins/dateRangeOverlap';
+
+atemporal.extend(dateRangeOverlapPlugin);
+
+// Meeting scheduling
+const meeting1 = {
+  start: '2024-03-20T14:00:00',
+  end: '2024-03-20T15:00:00'
+};
+
+const meeting2 = {
+  start: '2024-03-20T14:30:00',
+  end: '2024-03-20T15:30:00'
+};
+
+const result = atemporal.checkDateRangeOverlap(meeting1, meeting2);
+console.log(result.overlaps);  // true
+console.log(result.overlapRange);
+// { start: 2024-03-20T14:30:00, end: 2024-03-20T15:00:00 }
+
+// Check if a date falls within a range
+const vacation = {
+  start: '2024-07-01',
+  end: '2024-07-15'
+};
+
+const requestedDate = atemporal('2024-07-10');
+const isInRange = requestedDate.rangeOverlapsWith(vacation);
+console.log(isInRange.overlaps);  // true
+```
+
+</Accordion>
+
+<Accordion title="Check if date is between two dates">
+
+Use comparison methods for scheduling logic:
+
+```typescript
+import atemporal from 'atemporal';
+
+const eventStart = atemporal('2024-06-01');
+const eventEnd = atemporal('2024-06-30');
+const checkDate = atemporal('2024-06-15');
+
+// Check if date is in range (inclusive by default)
+checkDate.isBetween(eventStart, eventEnd);  // true
+
+// Exclusive check
+eventStart.isBetween(eventStart, eventEnd, '()');  // false
+
+// Other comparison methods
+checkDate.isAfter(eventStart);              // true
+checkDate.isBefore(eventEnd);               // true
+checkDate.isSameOrAfter(eventStart);        // true
+checkDate.isSameOrBefore(eventEnd);         // true
+
+// Compare at specific granularity
+const date1 = atemporal('2024-06-15T10:30:00');
+const date2 = atemporal('2024-06-15T14:45:00');
+
+date1.isSame(date2, 'day');     // true (same day)
+date1.isSame(date2, 'hour');    // false (different hours)
+```
+
+</Accordion>
+
+## Parsing Custom Date Formats
+
+<Accordion title="Parse dates from strings">
+
+Parse dates that don't follow ISO 8601 format:
+
+```typescript
+import atemporal from 'atemporal';
+import customParseFormatPlugin from 'atemporal/plugins/customParseFormat';
+
+atemporal.extend(customParseFormatPlugin);
+
+// Parse various date formats
+const date1 = atemporal.fromFormat('25/12/2024', 'DD/MM/YYYY');
+console.log(date1.format('YYYY-MM-DD'));  // "2024-12-25"
+
+const date2 = atemporal.fromFormat('12-25-2024', 'MM-DD-YYYY');
+console.log(date2.format('YYYY-MM-DD'));  // "2024-12-25"
+
+// Parse with time
+const datetime1 = atemporal.fromFormat(
+  '2024/01/15 14:30',
+  'YYYY/MM/DD HH:mm'
+);
+console.log(datetime1.format('YYYY-MM-DD HH:mm'));
+// "2024-01-15 14:30"
+
+// 12-hour format with AM/PM
+const datetime2 = atemporal.fromFormat(
+  '03/20/2024 2:30 PM',
+  'MM/DD/YYYY h:mm A'
+);
+console.log(datetime2.format('YYYY-MM-DD HH:mm'));
+// "2024-03-20 14:30"
+
+// Time only (uses current date)
+const timeOnly = atemporal.fromFormat('14:45', 'HH:mm');
+console.log(timeOnly.format('YYYY-MM-DD HH:mm'));
+// "2024-03-20 14:45" (today's date with specified time)
+```
+
+**Supported format tokens:**
+- `YYYY` - 4-digit year
+- `YY` - 2-digit year
+- `MM` - Month (01-12)
+- `M` - Month (1-12)
+- `DD` - Day (01-31)
+- `D` - Day (1-31)
+- `HH` - Hour 24h (00-23)
+- `H` - Hour 24h (0-23)
+- `hh` - Hour 12h (01-12)
+- `h` - Hour 12h (1-12)
+- `mm` - Minutes (00-59)
+- `m` - Minutes (0-59)
+- `ss` - Seconds (00-59)
+- `s` - Seconds (0-59)
+- `A` - AM/PM
+- `a` - am/pm
+
+</Accordion>
+
+<Accordion title="Parse dates with month names">
+
+Handle dates with full or abbreviated month names:
+
+```typescript
+import atemporal from 'atemporal';
+import customParseFormatPlugin from 'atemporal/plugins/customParseFormat';
+
+atemporal.extend(customParseFormatPlugin);
+
+// Full month names
+const date1 = atemporal.fromFormat('December 25, 2024', 'MMMM DD, YYYY');
+console.log(date1.format('YYYY-MM-DD'));  // "2024-12-25"
+
+// Abbreviated month names
+const date2 = atemporal.fromFormat('Jan 15, 2024', 'MMM DD, YYYY');
+console.log(date2.format('YYYY-MM-DD'));  // "2024-01-15"
+
+// Mixed format
+const date3 = atemporal.fromFormat(
+  'July 4th, 2024 at 3:00 PM',
+  'MMMM Do, YYYY [at] h:mm A'
+);
+console.log(date3.format('YYYY-MM-DD HH:mm'));
+// "2024-07-04 15:00"
+```
+
+</Accordion>
+
+## Additional Examples
+
+<Accordion title="Find min/max dates">
+
+Find the earliest or latest date from a list:
+
+```typescript
+import atemporal from 'atemporal';
+
+const dates = [
+  '2024-03-15',
+  '2024-01-20',
+  '2024-06-30',
+  '2024-02-14'
+];
+
+// Find earliest date
+const earliest = atemporal.min(...dates);
+console.log(earliest.format('YYYY-MM-DD'));  // "2024-01-20"
+
+// Find latest date
+const latest = atemporal.max(...dates);
+console.log(latest.format('YYYY-MM-DD'));    // "2024-06-30"
+
+// Also works with arrays
+const minDate = atemporal.min(dates);
+const maxDate = atemporal.max(dates);
+```
+
+</Accordion>
+
+<Accordion title="Start and end of time periods">
+
+Get the beginning or end of various time periods:
+
+```typescript
+import atemporal from 'atemporal';
+
+const date = atemporal('2024-03-15T14:30:45');
+
+// Start of periods
+date.startOf('year').format();      // "2024-01-01T00:00:00"
+date.startOf('month').format();     // "2024-03-01T00:00:00"
+date.startOf('week').format();      // "2024-03-11T00:00:00" (Monday)
+date.startOf('day').format();       // "2024-03-15T00:00:00"
+date.startOf('hour').format();      // "2024-03-15T14:00:00"
+
+// End of periods
+date.endOf('year').format();        // "2024-12-31T23:59:59.999"
+date.endOf('month').format();       // "2024-03-31T23:59:59.999"
+date.endOf('week').format();        // "2024-03-17T23:59:59.999" (Sunday)
+date.endOf('day').format();         // "2024-03-15T23:59:59.999"
+```
+
+</Accordion>
+
+## Best Practices
+
+<Note>
+**Performance Tips:**
+- Atemporal uses intelligent caching for formatting, parsing, and comparisons
+- Reuse atemporal instances when possible - they're immutable
+- Configure default locale and timezone once at app initialization
+- Use lazy loading for plugins you don't need immediately
+</Note>
+
+<Note>
+**Type Safety:**
+- Atemporal is built with TypeScript and provides full type definitions
+- All methods return typed results for better IDE support
+- Use `.isValid()` to check if a date was parsed successfully
+</Note>
+
+<Note>
+**Time Zone Safety:**
+- Always store dates in UTC in your database
+- Convert to local time zones only for display
+- Use IANA time zone identifiers (e.g., 'America/New_York')
+- Atemporal handles DST transitions automatically
+</Note>

@@ -1,0 +1,425 @@
+---
+title: "DateRangeOverlap Plugin"
+description: "Date range intersection detection and overlap checking with timezone support"
+---
+
+## Overview
+
+The DateRangeOverlap plugin extends Atemporal with powerful date range overlap detection capabilities. It provides methods to check if two date ranges intersect and retrieve the overlapping period, with support for timezone handling, boundary inclusion options, and caching for optimal performance.
+
+## Installation
+
+### Using extend()
+
+```typescript
+import atemporal from 'atemporal';
+import dateRangeOverlapPlugin from 'atemporal/plugins/dateRangeOverlap';
+
+atemporal.extend(dateRangeOverlapPlugin);
+```
+
+### Using lazyLoad()
+
+```typescript
+import atemporal from 'atemporal';
+
+atemporal.lazyLoad('dateRangeOverlap');
+```
+
+## Types
+
+### DateRange
+
+Represents a date range with start and end dates.
+
+```typescript
+interface DateRange {
+  start: DateInput; // Date, string, or TemporalWrapper
+  end: DateInput;
+}
+```
+
+### OverlapResult
+
+The result of an overlap detection operation.
+
+```typescript
+interface OverlapResult {
+  overlaps: boolean;
+  overlapRange: DateRange | null; // The overlapping period, or null if no overlap
+}
+```
+
+### OverlapOptions
+
+Configuration options for overlap detection.
+
+```typescript
+interface OverlapOptions {
+  // Whether to include boundaries in overlap check
+  // Default: true (ranges touching at boundaries are considered overlapping)
+  includeBoundaries?: boolean;
+  
+  // Timezone for date parsing
+  // Default: system timezone
+  timezone?: string;
+  
+  // Strict validation (throws error if start > end)
+  // Default: true
+  strictValidation?: boolean;
+}
+```
+
+## Factory Methods
+
+### checkDateRangeOverlap()
+
+Checks if two date ranges overlap and returns the overlapping period.
+
+```typescript
+atemporal.checkDateRangeOverlap(
+  range1: DateRange,
+  range2: DateRange,
+  options?: OverlapOptions
+): OverlapResult
+```
+
+**Parameters:**
+- `range1` - First date range
+- `range2` - Second date range
+- `options` - Configuration options (optional)
+
+**Returns:** `OverlapResult` - Object containing overlap status and overlapping range
+
+**Throws:**
+- `InvalidDateRangeError` - If a range is invalid or dates cannot be parsed
+- `OverlapDetectionError` - If overlap detection fails
+
+**Example:**
+
+```typescript
+const result = atemporal.checkDateRangeOverlap(
+  { start: '2024-01-10', end: '2024-01-20' },
+  { start: '2024-01-15', end: '2024-01-25' }
+);
+
+console.log(result.overlaps); // true
+console.log(result.overlapRange);
+// { start: Date('2024-01-15'), end: Date('2024-01-20') }
+```
+
+## Instance Methods
+
+### rangeOverlapsWith()
+
+Checks if a date range overlaps with the current date instance (treated as a single-point range).
+
+```typescript
+rangeOverlapsWith(range: DateRange, options?: OverlapOptions): OverlapResult
+```
+
+**Parameters:**
+- `range` - The date range to check against
+- `options` - Configuration options (optional)
+
+**Returns:** `OverlapResult` - Object containing overlap status
+
+**Throws:**
+- `InvalidDateRangeError` - If the range is invalid or the instance is invalid
+
+**Example:**
+
+```typescript
+const date = atemporal('2024-01-15');
+const range = { start: '2024-01-10', end: '2024-01-20' };
+
+const result = date.rangeOverlapsWith(range);
+console.log(result.overlaps); // true
+console.log(result.overlapRange);
+// { start: Date('2024-01-15'), end: Date('2024-01-15') }
+```
+
+### to()
+
+Creates a date range from the current instance to another date.
+
+```typescript
+to(endDate: DateInput): DateRange
+```
+
+**Parameters:**
+- `endDate` - The end date of the range
+
+**Returns:** `DateRange` - Object with start and end dates
+
+**Throws:**
+- `InvalidDateRangeError` - If the current instance is invalid
+
+**Example:**
+
+```typescript
+const start = atemporal('2024-01-01');
+const range = start.to('2024-01-15');
+
+console.log(range);
+// { start: Date('2024-01-01'), end: Date('2024-01-15') }
+
+// Use with checkDateRangeOverlap
+const range1 = atemporal('2024-01-01').to('2024-01-15');
+const range2 = atemporal('2024-01-10').to('2024-01-20');
+const result = atemporal.checkDateRangeOverlap(range1, range2);
+```
+
+## Overlap Detection Behavior
+
+### Including Boundaries (Default)
+
+By default, ranges are considered overlapping if they touch at boundaries:
+
+```typescript
+// Ranges touch at boundary
+const result = atemporal.checkDateRangeOverlap(
+  { start: '2024-01-01', end: '2024-01-15' },
+  { start: '2024-01-15', end: '2024-01-31' },
+  { includeBoundaries: true } // default
+);
+
+console.log(result.overlaps); // true
+console.log(result.overlapRange);
+// { start: Date('2024-01-15'), end: Date('2024-01-15') }
+```
+
+### Excluding Boundaries
+
+With `includeBoundaries: false`, ranges must truly overlap:
+
+```typescript
+// Ranges touch but don't overlap
+const result = atemporal.checkDateRangeOverlap(
+  { start: '2024-01-01', end: '2024-01-15' },
+  { start: '2024-01-15', end: '2024-01-31' },
+  { includeBoundaries: false }
+);
+
+console.log(result.overlaps); // false
+console.log(result.overlapRange); // null
+```
+
+## Complete Examples
+
+### Basic Overlap Detection
+
+```typescript
+import atemporal from 'atemporal';
+import dateRangeOverlapPlugin from 'atemporal/plugins/dateRangeOverlap';
+
+atemporal.extend(dateRangeOverlapPlugin);
+
+// Check if project timelines overlap
+const project1 = { start: '2024-01-01', end: '2024-03-31' };
+const project2 = { start: '2024-02-15', end: '2024-05-15' };
+
+const result = atemporal.checkDateRangeOverlap(project1, project2);
+
+if (result.overlaps) {
+  const start = atemporal(result.overlapRange!.start);
+  const end = atemporal(result.overlapRange!.end);
+  
+  console.log(`Projects overlap from ${start.format('MMM DD')} to ${end.format('MMM DD')}`);
+  // Output: "Projects overlap from Feb 15 to Mar 31"
+}
+```
+
+### Vacation Conflict Checker
+
+```typescript
+function checkVacationConflict(
+  requestedVacation: DateRange,
+  bookedVacations: DateRange[]
+): { hasConflict: boolean; conflictingRanges: DateRange[] } {
+  const conflicts: DateRange[] = [];
+  
+  for (const booked of bookedVacations) {
+    const result = atemporal.checkDateRangeOverlap(requestedVacation, booked);
+    if (result.overlaps && result.overlapRange) {
+      conflicts.push(result.overlapRange);
+    }
+  }
+  
+  return {
+    hasConflict: conflicts.length > 0,
+    conflictingRanges: conflicts
+  };
+}
+
+// Usage
+const requested = { start: '2024-06-01', end: '2024-06-15' };
+const booked = [
+  { start: '2024-06-10', end: '2024-06-12' },
+  { start: '2024-07-01', end: '2024-07-05' }
+];
+
+const check = checkVacationConflict(requested, booked);
+if (check.hasConflict) {
+  console.log('Vacation request conflicts with existing bookings');
+  check.conflictingRanges.forEach(range => {
+    const start = atemporal(range.start);
+    const end = atemporal(range.end);
+    console.log(`  Conflict: ${start.format('MMM DD')} - ${end.format('MMM DD')}`);
+  });
+}
+```
+
+### Room Booking System
+
+```typescript
+interface Booking {
+  id: string;
+  room: string;
+  start: string;
+  end: string;
+}
+
+function canBookRoom(
+  room: string,
+  requestedStart: string,
+  requestedEnd: string,
+  existingBookings: Booking[]
+): boolean {
+  const requested = { start: requestedStart, end: requestedEnd };
+  
+  const roomBookings = existingBookings.filter(b => b.room === room);
+  
+  for (const booking of roomBookings) {
+    const result = atemporal.checkDateRangeOverlap(
+      requested,
+      { start: booking.start, end: booking.end },
+      { includeBoundaries: false } // Allow back-to-back bookings
+    );
+    
+    if (result.overlaps) {
+      return false; // Conflict found
+    }
+  }
+  
+  return true; // No conflicts
+}
+
+// Usage
+const bookings: Booking[] = [
+  { id: '1', room: 'A', start: '2024-01-15T09:00', end: '2024-01-15T11:00' },
+  { id: '2', room: 'A', start: '2024-01-15T11:00', end: '2024-01-15T13:00' }
+];
+
+const canBook = canBookRoom(
+  'A',
+  '2024-01-15T13:00',
+  '2024-01-15T15:00',
+  bookings
+);
+
+console.log(canBook); // true (back-to-back is allowed)
+```
+
+### Using Instance Methods
+
+```typescript
+// Check if a date falls within a range
+const appointmentDate = atemporal('2024-01-15');
+const availabilityWindow = {
+  start: '2024-01-01',
+  end: '2024-01-31'
+};
+
+const result = appointmentDate.rangeOverlapsWith(availabilityWindow);
+if (result.overlaps) {
+  console.log('Date is within the availability window');
+}
+
+// Create ranges using the to() method
+const campaign1 = atemporal('2024-01-01').to('2024-02-28');
+const campaign2 = atemporal('2024-02-15').to('2024-03-31');
+
+const overlap = atemporal.checkDateRangeOverlap(campaign1, campaign2);
+console.log(`Campaigns overlap: ${overlap.overlaps}`);
+```
+
+### Timezone Handling
+
+```typescript
+// Compare ranges in different timezones
+const result = atemporal.checkDateRangeOverlap(
+  { start: '2024-01-15T23:00:00', end: '2024-01-16T01:00:00' },
+  { start: '2024-01-16T00:00:00', end: '2024-01-16T02:00:00' },
+  { timezone: 'America/New_York' }
+);
+
+console.log(result.overlaps); // true
+```
+
+## Performance Features
+
+The plugin includes built-in LRU caching for improved performance:
+
+- Caches overlap detection results (200 entries)
+- Cache keys include range values and all options
+- Automatic cache invalidation for invalid ranges
+- Registered with global cache coordinator
+
+### Cache Statistics
+
+The cache is automatically registered with Atemporal's global cache coordinator:
+
+```typescript
+// Get all cache statistics (if global cache methods are available)
+const stats = atemporal.getCacheStats?.();
+console.log(stats?.dateRangeOverlap);
+// { size: 45, maxSize: 200 }
+```
+
+## Error Handling
+
+### InvalidDateRangeError
+
+Thrown when a date range is invalid:
+
+```typescript
+try {
+  atemporal.checkDateRangeOverlap(
+    { start: '2024-01-20', end: '2024-01-10' }, // Invalid: start > end
+    { start: '2024-01-01', end: '2024-01-31' },
+    { strictValidation: true }
+  );
+} catch (error) {
+  if (error instanceof InvalidDateRangeError) {
+    console.error('Invalid date range:', error.message);
+    console.error('Range:', error.range);
+  }
+}
+```
+
+### OverlapDetectionError
+
+Thrown when overlap detection fails unexpectedly:
+
+```typescript
+try {
+  atemporal.checkDateRangeOverlap(range1, range2);
+} catch (error) {
+  if (error instanceof OverlapDetectionError) {
+    console.error('Overlap detection failed:', error.message);
+    console.error('Ranges:', error.ranges);
+  }
+}
+```
+
+## Notes
+
+- All date inputs are converted to Date objects in the result
+- Invalid dates throw `InvalidDateRangeError` by default
+- Set `strictValidation: false` to allow ranges where start > end
+- The `includeBoundaries` option affects both overlap detection and overlap range calculation
+- Cached results are reused for identical inputs and options
+- The plugin uses efficient comparison logic for optimal performance
+- Overlapping ranges return the intersection as `overlapRange`
+- Non-overlapping ranges return `overlapRange: null`

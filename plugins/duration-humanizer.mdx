@@ -1,0 +1,396 @@
+---
+title: "Duration Humanizer Plugin"
+description: "Convert Temporal.Duration objects into human-readable, localized strings"
+---
+
+## Overview
+
+The Duration Humanizer plugin adds a `humanize` static method to the Atemporal factory, allowing conversion of `Temporal.Duration` objects into human-readable, localized strings like "2 hours and 30 minutes" or "3 días y 5 horas".
+
+## Installation
+
+Load the plugin using either `extend` or `lazyLoad`:
+
+```javascript
+import atemporal from '@atemporal/core';
+import durationHumanizerPlugin from '@atemporal/core/plugins/durationHumanizer';
+
+// Option 1: Load immediately
+atemporal.extend(durationHumanizerPlugin);
+
+// Option 2: Lazy load on first use
+atemporal.lazyLoad(durationHumanizerPlugin);
+```
+
+## Methods
+
+### `atemporal.humanize(durationLike, options?)`
+
+Converts a `Temporal.Duration` or duration-like object into a human-readable string.
+
+**Signature:**
+```typescript
+atemporal.humanize(
+  durationLike: Temporal.Duration | Temporal.DurationLike,
+  options?: HumanizeOptions
+): string
+```
+
+**Parameters:**
+- `durationLike`: A `Temporal.Duration` instance or plain object like `{ hours: 2, minutes: 30 }`
+- `options` (optional): Configuration object for formatting
+
+**Returns:** A formatted, human-readable string
+
+**Examples:**
+```javascript
+atemporal.humanize({ years: 1, months: 6 });
+// "1 year and 6 months"
+
+atemporal.humanize({ minutes: 5 }, { locale: 'es' });
+// "5 minutos"
+
+atemporal.humanize({ hours: 2, minutes: 30, seconds: 15 });
+// "2 hours, 30 minutes, and 15 seconds"
+```
+
+## Options
+
+The `HumanizeOptions` interface provides customization for the output:
+
+```typescript
+interface HumanizeOptions {
+  locale?: string;
+  listStyle?: 'long' | 'short' | 'narrow';
+  unitDisplay?: 'long' | 'short' | 'narrow';
+}
+```
+
+### `locale`
+
+The locale to use for formatting. Defaults to `'en'`.
+
+**Examples:**
+```javascript
+atemporal.humanize({ hours: 2 }, { locale: 'en' });
+// "2 hours"
+
+atemporal.humanize({ hours: 2 }, { locale: 'es' });
+// "2 horas"
+
+atemporal.humanize({ hours: 2 }, { locale: 'fr' });
+// "2 heures"
+```
+
+### `listStyle`
+
+Controls how multiple duration parts are joined together. Uses `Intl.ListFormat` styles.
+
+- `'long'` (default): Full conjunction style
+- `'short'`: Abbreviated conjunction style
+- `'narrow'`: Minimal conjunction style
+
+**Examples:**
+```javascript
+const duration = { hours: 2, minutes: 30 };
+
+atemporal.humanize(duration, { listStyle: 'long' });
+// "2 hours and 30 minutes"
+
+atemporal.humanize(duration, { listStyle: 'short' });
+// "2 hours, 30 minutes"
+
+atemporal.humanize(duration, { listStyle: 'narrow' });
+// "2 hours 30 minutes"
+```
+
+### `unitDisplay`
+
+Controls how units are displayed. Uses `Intl.NumberFormat` unit display styles.
+
+- `'long'` (default): Full unit names ("2 hours")
+- `'short'`: Abbreviated unit names ("2 hr")
+- `'narrow'`: Minimal unit names ("2h")
+
+**Examples:**
+```javascript
+const duration = { hours: 2, minutes: 30 };
+
+atemporal.humanize(duration, { unitDisplay: 'long' });
+// "2 hours and 30 minutes"
+
+atemporal.humanize(duration, { unitDisplay: 'short' });
+// "2 hr and 30 min"
+
+atemporal.humanize(duration, { unitDisplay: 'narrow' });
+// "2h and 30m"
+```
+
+## Supported Duration Units
+
+The plugin processes duration units in the following order:
+
+1. **years**
+2. **months**
+3. **weeks**
+4. **days**
+5. **hours**
+6. **minutes**
+7. **seconds**
+8. **milliseconds**
+
+Only non-zero units are included in the output.
+
+## Input Formats
+
+### Temporal.Duration Object
+
+```javascript
+import { Temporal } from '@js-temporal/polyfill';
+
+const duration = Temporal.Duration.from({ hours: 5, minutes: 30 });
+atemporal.humanize(duration);
+// "5 hours and 30 minutes"
+```
+
+### Duration-Like Plain Object
+
+```javascript
+atemporal.humanize({ hours: 5, minutes: 30 });
+// "5 hours and 30 minutes"
+
+atemporal.humanize({ days: 2, hours: 3 });
+// "2 days and 3 hours"
+
+atemporal.humanize({ years: 1, months: 6, days: 15 });
+// "1 year, 6 months, and 15 days"
+```
+
+### Single Unit
+
+```javascript
+atemporal.humanize({ hours: 1 });
+// "1 hour"
+
+atemporal.humanize({ minutes: 45 });
+// "45 minutes"
+
+atemporal.humanize({ seconds: 30 });
+// "30 seconds"
+```
+
+### Zero Duration
+
+```javascript
+atemporal.humanize({ seconds: 0 });
+// "0 seconds"
+
+atemporal.humanize({});
+// "0 seconds"
+```
+
+## Localization Examples
+
+### Spanish (`es`)
+
+```javascript
+atemporal.humanize({ hours: 2, minutes: 30 }, { locale: 'es' });
+// "2 horas y 30 minutos"
+
+atemporal.humanize({ days: 3, hours: 5 }, { locale: 'es' });
+// "3 días y 5 horas"
+```
+
+### French (`fr`)
+
+```javascript
+atemporal.humanize({ hours: 2, minutes: 30 }, { locale: 'fr' });
+// "2 heures et 30 minutes"
+
+atemporal.humanize({ months: 2, weeks: 1 }, { locale: 'fr' });
+// "2 mois et 1 semaine"
+```
+
+### German (`de`)
+
+```javascript
+atemporal.humanize({ hours: 2, minutes: 30 }, { locale: 'de' });
+// "2 Stunden und 30 Minuten"
+
+atemporal.humanize({ days: 5, hours: 3 }, { locale: 'de' });
+// "5 Tage und 3 Stunden"
+```
+
+### Japanese (`ja`)
+
+```javascript
+atemporal.humanize({ hours: 2, minutes: 30 }, { locale: 'ja' });
+// "2時間と30分"
+
+atemporal.humanize({ days: 3 }, { locale: 'ja' });
+// "3日"
+```
+
+### Chinese (`zh`)
+
+```javascript
+atemporal.humanize({ hours: 2, minutes: 30 }, { locale: 'zh' });
+// "2小时和30分钟"
+
+atemporal.humanize({ months: 1, days: 15 }, { locale: 'zh' });
+// "1月和15天"
+```
+
+### Supported Locales
+
+The plugin includes enhanced unit mappings for:
+- English (`en`)
+- Spanish (`es`)
+- French (`fr`)
+- German (`de`)
+- Italian (`it`)
+- Portuguese (`pt`)
+- Russian (`ru`)
+- Japanese (`ja`)
+- Korean (`ko`)
+- Chinese (`zh`)
+
+All locales supported by `Intl.NumberFormat` will work, but the above have optimized translations.
+
+## Advanced Examples
+
+### Multiple Units
+
+```javascript
+atemporal.humanize({
+  years: 1,
+  months: 3,
+  days: 15,
+  hours: 6,
+  minutes: 30
+});
+// "1 year, 3 months, 15 days, 6 hours, and 30 minutes"
+```
+
+### Combining Options
+
+```javascript
+atemporal.humanize(
+  { hours: 2, minutes: 30, seconds: 45 },
+  {
+    locale: 'es',
+    listStyle: 'short',
+    unitDisplay: 'short'
+  }
+);
+// "2 h, 30 min, 45 seg"
+
+atemporal.humanize(
+  { days: 3, hours: 5 },
+  {
+    locale: 'fr',
+    listStyle: 'long',
+    unitDisplay: 'narrow'
+  }
+);
+// "3j et 5h"
+```
+
+### Fractional Values
+
+```javascript
+atemporal.humanize({ hours: 2.5 });
+// "2.5 hours"
+
+atemporal.humanize({ minutes: 30.75 });
+// "30.75 minutes"
+```
+
+Fractional values are rounded to 2 decimal places internally.
+
+### From Time Difference
+
+```javascript
+const start = atemporal('2023-12-25T10:00:00');
+const end = atemporal('2023-12-25T12:30:45');
+
+const duration = {
+  hours: end.diff(start, 'hour'),
+  minutes: end.diff(start, 'minute') % 60,
+  seconds: end.diff(start, 'second') % 60
+};
+
+atemporal.humanize(duration);
+// "2 hours, 30 minutes, and 45 seconds"
+```
+
+### Creating Durations with Temporal
+
+```javascript
+import { Temporal } from '@js-temporal/polyfill';
+
+const duration = Temporal.Duration.from('PT2H30M');
+atemporal.humanize(duration);
+// "2 hours and 30 minutes"
+
+const isoString = 'P1Y6M15DT12H30M';
+const parsed = Temporal.Duration.from(isoString);
+atemporal.humanize(parsed);
+// "1 year, 6 months, 15 days, 12 hours, and 30 minutes"
+```
+
+## Performance
+
+The plugin includes an LRU cache (max 200 entries) that stores formatted duration results. This significantly improves performance for repeated calls with the same parameters.
+
+### Cache Management
+
+```javascript
+// Clear the duration humanizer cache
+atemporal.clearDurationHumanizerCache();
+
+// Get cache statistics
+const stats = atemporal.getDurationHumanizerCacheStats();
+console.log(stats);
+// { durationFormat: { size: 45, maxSize: 200 } }
+```
+
+## Error Handling
+
+The plugin includes comprehensive error handling:
+
+- Invalid or empty durations return `"0 seconds"`
+- Unsupported units are handled with fallback formatting
+- Intl API errors trigger fallback to simple string concatenation
+- All errors are logged to console with `console.warn()`
+
+**Examples:**
+```javascript
+// Invalid input
+atemporal.humanize(null);
+// "0 seconds"
+
+atemporal.humanize(undefined);
+// "0 seconds"
+
+atemporal.humanize({});
+// "0 seconds"
+```
+
+## Fallback Behavior
+
+If the `Intl` APIs fail (e.g., unsupported locale), the plugin provides intelligent fallbacks:
+
+1. Tries to use cached `Intl.NumberFormat` with unit formatting
+2. Falls back to localized unit names from internal mapping
+3. Falls back to basic English pluralization
+4. Ultimate fallback returns simple number + unit string
+
+## Best Practices
+
+1. **Specify locale**: Always provide a locale for consistent localized output
+2. **Choose appropriate display**: Use `narrow` for compact UIs, `long` for readable text
+3. **Filter zero values**: Only include non-zero duration units
+4. **Cache benefits**: Reuse the same duration values to benefit from caching
+5. **Validate input**: Ensure duration objects are valid before humanizing
+6. **Round appropriately**: Consider rounding sub-second values for readability

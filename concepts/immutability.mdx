@@ -1,0 +1,525 @@
+---
+title: Immutability
+description: Understand how Atemporal's immutable design prevents bugs and enables safe date manipulation
+---
+
+## Why Immutability Matters
+
+Atemporal is designed to be **fully immutable**. Every operation that modifies a date returns a new instance, leaving the original unchanged. This design prevents an entire class of bugs common in date manipulation.
+
+### The Problem with Mutable Dates
+
+```typescript
+// JavaScript's native Date is mutable
+const date = new Date('2024-07-16');
+const modified = date;
+
+modified.setMonth(11); // Modifies BOTH date and modified
+
+console.log(date.getMonth());     // 11 (December) - unexpected!
+console.log(modified.getMonth()); // 11 (December)
+```
+
+This behavior leads to subtle bugs:
+- **Shared references** - Passing dates to functions can unexpectedly modify them
+- **Temporal coupling** - Order of operations affects results
+- **Race conditions** - Concurrent modifications cause unpredictable behavior
+- **Testing difficulties** - Hard to reason about state changes
+
+### Atemporal's Solution
+
+```typescript
+import atemporal from 'atemporal';
+
+// Atemporal dates are immutable
+const date = atemporal('2024-07-16');
+const modified = date.set('month', 12);
+
+console.log(date.month);     // 7 (July) - original unchanged
+console.log(modified.month); // 12 (December) - new instance
+```
+
+<Note>
+  Every method that changes a date (`.add()`, `.subtract()`, `.set()`, `.timeZone()`, etc.) returns a **new instance** and never modifies the original.
+</Note>
+
+## How Atemporal Enforces Immutability
+
+### Internal Design
+
+Atemporal's immutability is enforced at the core through:
+
+1. **Private datetime field** - The internal `_datetime` property is marked `readonly`
+2. **Private constructor** - Instances can only be created through controlled static methods
+3. **Clone-on-modify** - All mutations create new instances via `_cloneWith()`
+
+```typescript src/TemporalWrapper.ts:85-210
+// From the source code
+export class TemporalWrapper {
+    private readonly _datetime: Temporal.ZonedDateTime | null;
+    private readonly _isValid: boolean;
+    readonly _isTemporalWrapper: true = true;
+
+    /**
+     * The constructor is private to ensure all instances are created through
+     * controlled static methods, which handle parsing and validation.
+     * @private
+     */
+    private constructor(input: DateInput, timeZone?: string) {
+        try {
+            this._datetime = TemporalUtils.from(input, timeZone);
+            this._isValid = true;
+        } catch (e) {
+            this._datetime = null;
+            this._isValid = false;
+        }
+    }
+
+    /**
+     * Clones the current instance with a new ZonedDateTime object.
+     * @internal
+     */
+    private _cloneWith(newDateTime: Temporal.ZonedDateTime): TemporalWrapper {
+        return TemporalWrapper._fromZonedDateTime(newDateTime);
+    }
+}
+```
+
+### Modification Methods
+
+All modification methods follow the same pattern:
+
+```typescript src/TemporalWrapper.ts:242-265
+// From add() method
+add(valueOrDuration: number | Temporal.Duration, unit?: TimeUnit): TemporalWrapper {
+    if (!this.isValid()) return this;
+
+    const duration = typeof valueOrDuration === 'number'
+        ? { [getDurationUnit(unit!)]: valueOrDuration }
+        : valueOrDuration;
+
+    const newDate = this.datetime.add(duration);
+    return this._cloneWith(newDate); // Returns NEW instance
+}
+```
+
+<Steps>
+  <Step title="Check Validity">
+    If the instance is invalid, return `this` (no operation needed)
+  </Step>
+  
+  <Step title="Perform Operation">
+    Apply the operation to the underlying `Temporal.ZonedDateTime`
+  </Step>
+  
+  <Step title="Clone with Result">
+    Create and return a new `TemporalWrapper` with the modified datetime
+  </Step>
+</Steps>
+
+## Chaining Methods Safely
+
+Immutability enables safe method chaining without side effects:
+
+```typescript
+import atemporal from 'atemporal';
+
+const baseDate = atemporal('2024-07-16T10:00:00Z');
+
+// Chain multiple operations
+const result = baseDate
+  .add(2, 'month')
+  .add(5, 'day')
+  .set('hour', 14)
+  .set('minute', 30)
+  .timeZone('America/New_York');
+
+// Original is unchanged
+console.log(baseDate.format('YYYY-MM-DD HH:mm'));
+// Output: 2024-07-16 10:00
+
+// Result has all modifications
+console.log(result.format('YYYY-MM-DD HH:mm z'));
+// Output: 2024-09-21 14:30 America/New_York
+```
+
+### Multiple Branches
+
+Create multiple variations from a single base date:
+
+```typescript
+import atemporal from 'atemporal';
+
+const base = atemporal('2024-07-16');
+
+// Create different variations
+const startOfWeek = base.startOf('week');
+const endOfWeek = base.endOf('week');
+const nextMonth = base.add(1, 'month');
+const lastYear = base.subtract(1, 'year');
+
+// All variations are independent
+console.log(base.format('YYYY-MM-DD'));         // 2024-07-16
+console.log(startOfWeek.format('YYYY-MM-DD'));  // 2024-07-15 (Monday)
+console.log(endOfWeek.format('YYYY-MM-DD'));    // 2024-07-21 (Sunday)
+console.log(nextMonth.format('YYYY-MM-DD'));    // 2024-08-16
+console.log(lastYear.format('YYYY-MM-DD'));     // 2023-07-16
+```
+
+## Sharing Dates Safely
+
+### Passing to Functions
+
+Functions cannot modify dates passed to them:
+
+```typescript
+import atemporal from 'atemporal';
+
+function addBusinessDays(date: TemporalWrapper, days: number): TemporalWrapper {
+  // This creates a NEW instance
+  return date.add(days, 'day');
+}
+
+const original = atemporal('2024-07-16');
+const result = addBusinessDays(original, 5);
+
+// Original is unchanged
+console.log(original.format('YYYY-MM-DD')); // 2024-07-16
+console.log(result.format('YYYY-MM-DD'));   // 2024-07-21
+```
+
+### Storing in Data Structures
+
+Store dates in arrays, objects, or Maps without fear of mutation:
+
+```typescript
+import atemporal from 'atemporal';
+
+const dates = [
+  atemporal('2024-01-01'),
+  atemporal('2024-06-15'),
+  atemporal('2024-12-31')
+];
+
+// Modify a date
+const modified = dates[0].add(1, 'month');
+
+// Original array is unchanged
+console.log(dates[0].format('YYYY-MM-DD')); // 2024-01-01
+console.log(modified.format('YYYY-MM-DD'));  // 2024-02-01
+```
+
+### Concurrent Operations
+
+Multiple operations can safely work with the same date:
+
+```typescript
+import atemporal from 'atemporal';
+
+const date = atemporal('2024-07-16');
+
+// These operations are completely independent
+const future = date.add(1, 'month');
+const past = date.subtract(1, 'month');
+const modified = date.set('hour', 12);
+const converted = date.timeZone('Asia/Tokyo');
+
+// All results are different, date is unchanged
+console.log(date.format('YYYY-MM-DD HH:mm z'));
+// Output: 2024-07-16 00:00 UTC
+```
+
+## Performance Implications
+
+### Structural Sharing
+
+Atemporal leverages the underlying `Temporal.ZonedDateTime` object, which is also immutable. This means:
+
+- **Efficient cloning** - Creating new instances is fast
+- **Memory efficient** - The underlying Temporal API uses structural sharing
+- **Garbage collector friendly** - Short-lived intermediate objects are quickly collected
+
+```typescript
+import atemporal from 'atemporal';
+
+// Creating many instances is efficient
+const dates = Array.from({ length: 1000 }, (_, i) => 
+  atemporal('2024-01-01').add(i, 'day')
+);
+```
+
+### Clone Method
+
+The `.clone()` method creates an explicit copy:
+
+```typescript src/TemporalWrapper.ts:384-391
+/**
+ * Creates a deep copy of the Atemporal instance.
+ * @returns A new, identical TemporalWrapper instance.
+ */
+clone(): TemporalWrapper {
+    if (!this.isValid()) return this;
+    return this._cloneWith(this.datetime);
+}
+```
+
+Use `.clone()` when you want to be explicit about creating a copy:
+
+```typescript
+const date = atemporal('2024-07-16');
+const copy = date.clone();
+
+// Both are separate instances
+console.log(date === copy); // false
+```
+
+<Note>
+  In practice, you rarely need `.clone()` since all modification methods already return new instances.
+</Note>
+
+### Benchmarking
+
+Test immutability performance:
+
+```typescript
+import atemporal from 'atemporal';
+
+const iterations = 100000;
+const date = atemporal('2024-07-16');
+
+console.time('Immutable operations');
+for (let i = 0; i < iterations; i++) {
+  const result = date.add(i, 'day');
+}
+console.timeEnd('Immutable operations');
+// Fast even with many operations
+```
+
+## Comparison with Other Libraries
+
+<Tabs>
+  <Tab title="Atemporal (Immutable)">
+    ```typescript
+    import atemporal from 'atemporal';
+    
+    const date = atemporal('2024-07-16');
+    const modified = date.add(1, 'month');
+    
+    // Original unchanged
+    console.log(date.month); // 7
+    console.log(modified.month); // 8
+    ```
+  </Tab>
+  
+  <Tab title="Native Date (Mutable)">
+    ```typescript
+    const date = new Date('2024-07-16');
+    const modified = date;
+    
+    modified.setMonth(7); // Modifies both!
+    
+    // Both changed
+    console.log(date.getMonth()); // 7
+    console.log(modified.getMonth()); // 7
+    ```
+  </Tab>
+  
+  <Tab title="Day.js (Immutable)">
+    ```typescript
+    import dayjs from 'dayjs';
+    
+    const date = dayjs('2024-07-16');
+    const modified = date.add(1, 'month');
+    
+    // Original unchanged
+    console.log(date.month()); // 6
+    console.log(modified.month()); // 7
+    ```
+  </Tab>
+  
+  <Tab title="Moment.js (Mutable)">
+    ```typescript
+    import moment from 'moment';
+    
+    const date = moment('2024-07-16');
+    const modified = date.add(1, 'month');
+    
+    // Both changed (unless you clone)
+    console.log(date.month()); // 7
+    console.log(modified.month()); // 7
+    ```
+  </Tab>
+</Tabs>
+
+## Best Practices
+
+<Steps>
+  <Step title="Never Worry About Mutations">
+    Pass Atemporal instances freely without defensive copying:
+    
+    ```typescript
+    function processDate(date: TemporalWrapper) {
+      // Modifications are always safe
+      return date.add(1, 'day').startOf('day');
+    }
+    ```
+  </Step>
+  
+  <Step title="Chain Operations Freely">
+    Chain as many operations as needed without side effects:
+    
+    ```typescript
+    const result = date
+      .startOf('month')
+      .add(1, 'week')
+      .set('hour', 9)
+      .timeZone('America/New_York');
+    ```
+  </Step>
+  
+  <Step title="Use Base Dates">
+    Create base dates and derive variations:
+    
+    ```typescript
+    const baseDate = atemporal('2024-01-01');
+    const q1Start = baseDate;
+    const q2Start = baseDate.add(3, 'month');
+    const q3Start = baseDate.add(6, 'month');
+    const q4Start = baseDate.add(9, 'month');
+    ```
+  </Step>
+  
+  <Step title="Store Without Worry">
+    Store dates in state, Redux, or databases without mutation concerns:
+    
+    ```typescript
+    const state = {
+      startDate: atemporal('2024-01-01'),
+      endDate: atemporal('2024-12-31')
+    };
+    
+    // Operations never mutate state
+    const newStart = state.startDate.add(1, 'month');
+    ```
+  </Step>
+</Steps>
+
+## Real-World Benefits
+
+### React State Management
+
+```typescript
+import { useState } from 'react';
+import atemporal from 'atemporal';
+
+function DatePicker() {
+  const [selectedDate, setSelectedDate] = useState(atemporal());
+  
+  const handleNextDay = () => {
+    // Safe - creates new instance
+    setSelectedDate(prev => prev.add(1, 'day'));
+  };
+  
+  const handlePrevDay = () => {
+    // Safe - creates new instance
+    setSelectedDate(prev => prev.subtract(1, 'day'));
+  };
+  
+  return (
+    <div>
+      <button onClick={handlePrevDay}>Previous</button>
+      <span>{selectedDate.format('YYYY-MM-DD')}</span>
+      <button onClick={handleNextDay}>Next</button>
+    </div>
+  );
+}
+```
+
+### Redux Actions
+
+```typescript
+import atemporal from 'atemporal';
+
+// Actions never mutate dates
+export const setDateRange = (start: string, end: string) => ({
+  type: 'SET_DATE_RANGE',
+  payload: {
+    start: atemporal(start),
+    end: atemporal(end)
+  }
+});
+
+export const extendRange = (days: number) => ({
+  type: 'EXTEND_RANGE',
+  payload: { days }
+});
+
+// Reducer
+function dateReducer(state = initialState, action) {
+  switch (action.type) {
+    case 'SET_DATE_RANGE':
+      return {
+        ...state,
+        start: action.payload.start,
+        end: action.payload.end
+      };
+    case 'EXTEND_RANGE':
+      return {
+        ...state,
+        end: state.end.add(action.payload.days, 'day')
+      };
+    default:
+      return state;
+  }
+}
+```
+
+### Testing
+
+```typescript
+import atemporal from 'atemporal';
+import { describe, it, expect } from 'vitest';
+
+describe('Date calculations', () => {
+  it('should not mutate original date', () => {
+    const original = atemporal('2024-07-16');
+    const modified = original.add(1, 'month');
+    
+    // Clear expectations
+    expect(original.month).toBe(7);
+    expect(modified.month).toBe(8);
+  });
+  
+  it('should allow multiple variations', () => {
+    const base = atemporal('2024-07-16');
+    
+    const variations = [
+      base.add(1, 'day'),
+      base.add(1, 'week'),
+      base.add(1, 'month')
+    ];
+    
+    // Base unchanged
+    expect(base.format('YYYY-MM-DD')).toBe('2024-07-16');
+    
+    // Each variation independent
+    expect(variations[0].format('YYYY-MM-DD')).toBe('2024-07-17');
+    expect(variations[1].format('YYYY-MM-DD')).toBe('2024-07-23');
+    expect(variations[2].format('YYYY-MM-DD')).toBe('2024-08-16');
+  });
+});
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Working with Dates" icon="clock" href="/concepts/working-with-dates">
+    See immutability in action with date operations
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/manipulation">
+    Explore all immutable methods
+  </Card>
+  <Card title="Advanced Patterns" icon="bolt" href="/guides/advanced-patterns">
+    Learn about performance optimizations
+  </Card>
+</CardGroup>

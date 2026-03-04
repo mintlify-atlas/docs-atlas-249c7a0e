@@ -1,0 +1,323 @@
+---
+title: "BusinessDays Plugin"
+description: "Business day calculations with holiday support and custom weekend configurations"
+---
+
+## Overview
+
+The BusinessDays plugin adds business day calculations to Atemporal. It allows you to work with business days while accounting for holidays and custom weekend configurations, making it perfect for scheduling, deadline calculations, and business logic.
+
+## Installation
+
+### Using extend()
+
+```typescript
+import atemporal from 'atemporal';
+import businessDaysPlugin from 'atemporal/plugins/businessDays';
+
+atemporal.extend(businessDaysPlugin);
+```
+
+### Using lazyLoad()
+
+```typescript
+import atemporal from 'atemporal';
+
+atemporal.lazyLoad('businessDays');
+```
+
+## Configuration
+
+### setBusinessDaysConfig()
+
+Configures holidays and weekend days for business day calculations.
+
+```typescript
+atemporal.setBusinessDaysConfig(options: BusinessDaysOptions): void
+```
+
+**Parameters:**
+
+```typescript
+interface BusinessDaysOptions {
+  // Array of holidays (ISO 8601 strings or Date objects)
+  holidays?: (string | Date)[];
+  
+  // Array of weekend days (1 = Monday, 7 = Sunday)
+  // Default: [6, 7] (Saturday, Sunday)
+  weekendDays?: number[];
+}
+```
+
+**Example:**
+
+```typescript
+// Standard configuration (Saturday/Sunday weekends)
+atemporal.setBusinessDaysConfig({
+  holidays: [
+    '2024-01-01', // New Year's Day
+    '2024-07-04', // Independence Day
+    '2024-12-25', // Christmas
+  ],
+  weekendDays: [6, 7] // Saturday, Sunday (default)
+});
+
+// Middle East configuration (Friday/Saturday weekends)
+atemporal.setBusinessDaysConfig({
+  holidays: ['2024-04-10', '2024-06-15'],
+  weekendDays: [5, 6] // Friday, Saturday
+});
+
+// Custom configuration (only Sunday as weekend)
+atemporal.setBusinessDaysConfig({
+  holidays: [],
+  weekendDays: [7] // Sunday only
+});
+```
+
+## Instance Methods
+
+### isBusinessDay()
+
+Checks if the current date is a business day (not a weekend or holiday).
+
+```typescript
+isBusinessDay(): boolean
+```
+
+**Returns:** `boolean` - `true` if the date is a business day, `false` otherwise
+
+**Example:**
+
+```typescript
+atemporal.setBusinessDaysConfig({
+  holidays: ['2024-01-01'],
+  weekendDays: [6, 7]
+});
+
+const monday = atemporal('2024-01-08');
+monday.isBusinessDay(); // true
+
+const saturday = atemporal('2024-01-13');
+saturday.isBusinessDay(); // false (weekend)
+
+const holiday = atemporal('2024-01-01');
+holiday.isBusinessDay(); // false (holiday)
+```
+
+### isHoliday()
+
+Checks if the current date is a configured holiday.
+
+```typescript
+isHoliday(): boolean
+```
+
+**Returns:** `boolean` - `true` if the date is a holiday, `false` otherwise
+
+**Example:**
+
+```typescript
+atemporal.setBusinessDaysConfig({
+  holidays: ['2024-12-25']
+});
+
+const christmas = atemporal('2024-12-25');
+christmas.isHoliday(); // true
+
+const regularDay = atemporal('2024-12-26');
+regularDay.isHoliday(); // false
+```
+
+### isWeekend()
+
+Checks if the current date falls on a weekend.
+
+```typescript
+isWeekend(): boolean
+```
+
+**Returns:** `boolean` - `true` if the date is a weekend day, `false` otherwise
+
+**Example:**
+
+```typescript
+atemporal.setBusinessDaysConfig({
+  weekendDays: [6, 7] // Saturday, Sunday
+});
+
+const friday = atemporal('2024-01-12');
+friday.isWeekend(); // false
+
+const saturday = atemporal('2024-01-13');
+saturday.isWeekend(); // true
+```
+
+### addBusinessDays()
+
+Adds a specified number of business days to the current date.
+
+```typescript
+addBusinessDays(days: number): TemporalWrapper
+```
+
+**Parameters:**
+- `days` - Number of business days to add (can be negative)
+
+**Returns:** `TemporalWrapper` - New instance with business days added
+
+**Example:**
+
+```typescript
+atemporal.setBusinessDaysConfig({
+  holidays: [],
+  weekendDays: [6, 7]
+});
+
+const friday = atemporal('2024-01-12'); // Friday
+const result = friday.addBusinessDays(3);
+// Skips weekend (Sat 13, Sun 14)
+result.format('YYYY-MM-DD'); // '2024-01-17' (Wednesday)
+
+// Add zero days returns a clone
+const same = friday.addBusinessDays(0);
+same.format('YYYY-MM-DD'); // '2024-01-12'
+```
+
+### subtractBusinessDays()
+
+Subtracts a specified number of business days from the current date.
+
+```typescript
+subtractBusinessDays(days: number): TemporalWrapper
+```
+
+**Parameters:**
+- `days` - Number of business days to subtract
+
+**Returns:** `TemporalWrapper` - New instance with business days subtracted
+
+**Example:**
+
+```typescript
+const monday = atemporal('2024-01-15'); // Monday
+const result = monday.subtractBusinessDays(3);
+// Skips weekend (Sat 13, Sun 14)
+result.format('YYYY-MM-DD'); // '2024-01-10' (Wednesday)
+```
+
+### nextBusinessDay()
+
+Returns the next business day after the current date.
+
+```typescript
+nextBusinessDay(): TemporalWrapper
+```
+
+**Returns:** `TemporalWrapper` - The next business day
+
+**Note:** This always returns the *next* business day, even if the current day is already a business day.
+
+**Example:**
+
+```typescript
+const thursday = atemporal('2024-01-11'); // Thursday
+thursday.nextBusinessDay().format('YYYY-MM-DD'); // '2024-01-12' (Friday)
+
+const friday = atemporal('2024-01-12'); // Friday
+friday.nextBusinessDay().format('YYYY-MM-DD'); // '2024-01-15' (Monday, skips weekend)
+
+const saturday = atemporal('2024-01-13'); // Saturday
+saturday.nextBusinessDay().format('YYYY-MM-DD'); // '2024-01-15' (Monday)
+```
+
+## Complete Example
+
+```typescript
+import atemporal from 'atemporal';
+import businessDaysPlugin from 'atemporal/plugins/businessDays';
+
+atemporal.extend(businessDaysPlugin);
+
+// Configure US business calendar
+atemporal.setBusinessDaysConfig({
+  holidays: [
+    '2024-01-01', // New Year's Day
+    '2024-07-04', // Independence Day
+    '2024-11-28', // Thanksgiving
+    '2024-12-25', // Christmas
+  ],
+  weekendDays: [6, 7] // Saturday, Sunday
+});
+
+// Check if dates are business days
+const monday = atemporal('2024-01-08');
+console.log(monday.isBusinessDay()); // true
+
+const newYear = atemporal('2024-01-01');
+console.log(newYear.isBusinessDay()); // false (holiday)
+console.log(newYear.isHoliday()); // true
+
+const saturday = atemporal('2024-01-13');
+console.log(saturday.isBusinessDay()); // false (weekend)
+console.log(saturday.isWeekend()); // true
+
+// Calculate business days
+const startDate = atemporal('2024-01-10'); // Wednesday
+const deadline = startDate.addBusinessDays(5);
+console.log(deadline.format('YYYY-MM-DD')); // '2024-01-17' (Wed → Thu, Fri, Mon, Tue, Wed)
+
+// Subtract business days
+const dueDate = atemporal('2024-01-17'); // Wednesday
+const startDate2 = dueDate.subtractBusinessDays(5);
+console.log(startDate2.format('YYYY-MM-DD')); // '2024-01-10' (Wednesday)
+
+// Find next business day
+const friday = atemporal('2024-01-12'); // Friday
+const nextDay = friday.nextBusinessDay();
+console.log(nextDay.format('YYYY-MM-DD')); // '2024-01-15' (Monday)
+```
+
+## Use Cases
+
+### Project Deadline Calculation
+
+```typescript
+const projectStart = atemporal('2024-01-08');
+const deadline = projectStart.addBusinessDays(10);
+console.log(`Project deadline: ${deadline.format('YYYY-MM-DD')}`);
+```
+
+### Service Level Agreement (SLA) Tracking
+
+```typescript
+const ticketCreated = atemporal('2024-01-10');
+const slaDeadline = ticketCreated.addBusinessDays(3); // 3 business day SLA
+
+if (atemporal().isAfter(slaDeadline)) {
+  console.log('SLA breach!');
+}
+```
+
+### Regional Calendar Support
+
+```typescript
+// Middle East configuration
+atemporal.setBusinessDaysConfig({
+  holidays: ['2024-04-10', '2024-06-15'],
+  weekendDays: [5, 6] // Friday, Saturday
+});
+
+const date = atemporal('2024-01-11'); // Thursday
+const next = date.nextBusinessDay();
+console.log(next.format('ddd YYYY-MM-DD')); // 'Sun 2024-01-14'
+```
+
+## Notes
+
+- Invalid dates always return `false` for all check methods
+- Adding/subtracting 0 business days returns a clone of the current instance
+- The configuration is global and affects all atemporal instances
+- Holidays should be provided as date-only strings (YYYY-MM-DD) or Date objects
+- Weekend days use ISO day numbering: 1 = Monday, 2 = Tuesday, ..., 7 = Sunday
+- The plugin intelligently skips weekends and holidays when calculating business days

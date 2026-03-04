@@ -1,0 +1,171 @@
+---
+title: "Relative Time Plugin"
+description: "Format dates as human-readable relative time strings like '5 minutes ago' or 'in 2 hours'"
+---
+
+## Overview
+
+The Relative Time plugin extends Atemporal with methods to format dates as human-readable relative time strings. It leverages native `Intl.RelativeTimeFormat` APIs for robust localization and includes intelligent caching for optimal performance.
+
+## Installation
+
+Load the plugin using either `extend` or `lazyLoad`:
+
+```javascript
+import atemporal from '@atemporal/core';
+import relativeTimePlugin from '@atemporal/core/plugins/relativeTime';
+
+// Option 1: Load immediately
+atemporal.extend(relativeTimePlugin);
+
+// Option 2: Lazy load on first use
+atemporal.lazyLoad(relativeTimePlugin);
+```
+
+## Methods
+
+### `.fromNow(withoutSuffix?)`
+
+Calculates the relative time from the instance to now.
+
+**Signature:**
+```typescript
+fromNow(withoutSuffix?: boolean): string
+```
+
+**Parameters:**
+- `withoutSuffix` (optional): If `true`, removes the "ago" or "in" prefix/suffix. Default: `false`
+
+**Returns:** Formatted relative time string
+
+**Examples:**
+```javascript
+atemporal().subtract(5, 'minutes').fromNow();
+// "5 minutes ago"
+
+atemporal().add(2, 'hours').fromNow();
+// "in 2 hours"
+
+atemporal().subtract(1, 'day').fromNow(true);
+// "1 day" (without suffix)
+```
+
+### `.toNow(withoutSuffix?)`
+
+Calculates the relative time from now to the instance. This is the inverse of `fromNow()`.
+
+**Signature:**
+```typescript
+toNow(withoutSuffix?: boolean): string
+```
+
+**Parameters:**
+- `withoutSuffix` (optional): If `true`, removes the "ago" or "in" prefix/suffix. Default: `false`
+
+**Returns:** Formatted relative time string
+
+**Examples:**
+```javascript
+atemporal().subtract(5, 'minutes').toNow();
+// "in 5 minutes"
+
+atemporal().add(2, 'hours').toNow();
+// "2 hours ago"
+
+atemporal().add(3, 'days').toNow(true);
+// "3 days" (without suffix)
+```
+
+## Time Unit Selection
+
+The plugin intelligently selects the appropriate time unit based on the difference magnitude:
+
+- **Seconds**: Less than 45 seconds
+- **Minutes**: 45 seconds to 45 minutes
+- **Hours**: 45 minutes to 22 hours
+- **Days**: 22 hours to 26 days
+- **Months**: 26 days to 11 months
+- **Years**: 11 months or more
+
+## Localization
+
+The plugin uses the default locale set on the `atemporal` factory and fully supports `Intl.RelativeTimeFormat` localization:
+
+```javascript
+atemporal.setDefaultLocale('es');
+atemporal().subtract(5, 'minutes').fromNow();
+// "hace 5 minutos"
+
+atemporal.setDefaultLocale('fr');
+atemporal().add(2, 'hours').fromNow();
+// "dans 2 heures"
+```
+
+## Performance
+
+The plugin includes an LRU cache (max 150 entries) that stores formatted results for improved performance on repeated calls with the same parameters.
+
+### Cache Management
+
+```javascript
+// Clear the relative time cache
+atemporal.clearRelativeTimeCache();
+
+// Get cache statistics
+const stats = atemporal.getRelativeTimeCacheStats();
+console.log(stats);
+// { relativeTime: { size: 42, maxSize: 150 } }
+```
+
+## Error Handling
+
+The plugin includes comprehensive error handling:
+
+- Invalid dates return `"Invalid Date"`
+- Fallback formatting is used if `Intl` APIs fail
+- All errors are logged to console with `console.warn()`
+
+## Examples
+
+### Basic Usage
+
+```javascript
+const now = atemporal();
+const past = atemporal().subtract(30, 'minutes');
+const future = atemporal().add(5, 'hours');
+
+past.fromNow();    // "30 minutes ago"
+future.fromNow();  // "in 5 hours"
+
+past.toNow();      // "in 30 minutes"
+future.toNow();    // "5 hours ago"
+```
+
+### With Different Time Units
+
+```javascript
+atemporal().subtract(30, 'seconds').fromNow();  // "30 seconds ago"
+atemporal().subtract(45, 'minutes').fromNow();  // "an hour ago"
+atemporal().subtract(2, 'days').fromNow();      // "2 days ago"
+atemporal().subtract(3, 'months').fromNow();    // "3 months ago"
+atemporal().subtract(1, 'year').fromNow();      // "a year ago"
+```
+
+### Without Suffix
+
+```javascript
+atemporal().subtract(5, 'hours').fromNow(true);  // "5 hours"
+atemporal().add(10, 'days').fromNow(true);       // "10 days"
+```
+
+### Localized Examples
+
+```javascript
+atemporal.setDefaultLocale('de');
+atemporal().subtract(2, 'hours').fromNow();
+// "vor 2 Stunden"
+
+atemporal.setDefaultLocale('ja');
+atemporal().add(3, 'days').fromNow();
+// "3日後"
+```

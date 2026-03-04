@@ -1,0 +1,439 @@
+---
+title: Working with Dates
+description: Learn how to create, parse, manipulate, and compare dates in Atemporal
+---
+
+## Creating Dates
+
+Atemporal provides multiple ways to create date instances, accepting various input types for maximum flexibility.
+
+### Current Time
+
+Create an instance representing the current moment:
+
+```typescript
+import atemporal from 'atemporal';
+
+const now = atemporal();
+console.log(now.toString()); // Current time in UTC
+```
+
+### From ISO String
+
+Parse standard ISO 8601 date strings:
+
+```typescript
+const specificDate = atemporal('2024-07-26T15:30:00Z');
+console.log(specificDate.format('YYYY-MM-DD HH:mm:ss'));
+// Output: 2024-07-26 15:30:00
+```
+
+### From JavaScript Date
+
+Convert existing Date objects:
+
+```typescript
+const fromJsDate = atemporal(new Date());
+console.log(fromJsDate.toString());
+```
+
+### From Unix Timestamp
+
+Create from seconds since epoch:
+
+```typescript
+const fromUnix = atemporal.unix(1627315800);
+console.log(fromUnix.format('YYYY-MM-DD'));
+```
+
+### From Array
+
+Create from an array of date components `[year, month, day, hour, minute, second]`:
+
+```typescript
+const fromArray = atemporal([2025, 1, 20, 14, 0]);
+console.log(fromArray.format('YYYY-MM-DD HH:mm'));
+// Output: 2025-01-20 14:00
+```
+
+### From Plain Object
+
+Create from an object with date properties:
+
+```typescript
+const fromObject = atemporal({ year: 2025, month: 6, day: 10 });
+console.log(fromObject.format('YYYY-MM-DD'));
+// Output: 2025-06-10
+
+// With time components
+const withTime = atemporal({
+  year: 2024,
+  month: 3,
+  day: 15,
+  hour: 14,
+  minute: 30,
+  second: 0
+});
+```
+
+<Note>
+  The `atemporal.from()` method is an alias for the main factory function and accepts the same input types.
+</Note>
+
+## Parsing Dates
+
+Atemporal uses a high-performance parsing system with multiple strategies:
+
+<Steps>
+  <Step title="Automatic Type Detection">
+    The parser automatically detects input types and selects the optimal parsing strategy:
+    
+    ```typescript
+    atemporal('2024-01-01');           // String strategy
+    atemporal(1627315800000);          // Number strategy (milliseconds)
+    atemporal(new Date());             // Date strategy
+    atemporal([2024, 1, 1]);          // Array strategy
+    ```
+  </Step>
+  
+  <Step title="Performance Optimization">
+    The parsing system includes caching and fast-path optimization:
+    
+    ```typescript
+    // Get parsing performance metrics
+    const metrics = atemporal.from.getParsingMetrics();
+    console.log(metrics);
+    
+    // Clear cache if needed
+    atemporal.from.clearParsingCache();
+    ```
+  </Step>
+  
+  <Step title="Validation">
+    Check if an input can be parsed into a valid date:
+    
+    ```typescript
+    atemporal.isValid('2024-01-01'); // true
+    atemporal.isValid('invalid');    // false
+    
+    // Check instance validity
+    const date = atemporal('2024-01-01');
+    if (date.isValid()) {
+      console.log('Date is valid');
+    }
+    ```
+  </Step>
+</Steps>
+
+## Manipulating Dates
+
+All manipulation methods return new instances, preserving immutability.
+
+### Adding Time
+
+<CodeGroup>
+```typescript Add with Unit
+const date = atemporal('2024-07-26T15:30:00Z');
+
+const future = date
+  .add(2, 'month')
+  .add(5, 'day')
+  .add(3, 'hour');
+
+console.log(future.format('YYYY-MM-DD HH:mm'));
+// Output: 2024-09-30 18:30
+```
+
+```typescript Add with Duration
+import atemporal from 'atemporal';
+
+const date = atemporal('2024-07-26T15:30:00Z');
+const duration = atemporal.duration({ hours: 2, minutes: 30 });
+
+const result = date.add(duration);
+console.log(result.format('HH:mm'));
+// Output: 18:00
+```
+</CodeGroup>
+
+### Subtracting Time
+
+```typescript
+const date = atemporal('2024-07-26T15:30:00Z');
+
+const past = date
+  .subtract(1, 'month')
+  .subtract(10, 'day');
+
+console.log(past.format('YYYY-MM-DD'));
+// Output: 2024-06-16
+```
+
+### Setting Values
+
+Set specific units to new values:
+
+```typescript
+const date = atemporal('2024-07-26T15:30:00Z');
+
+const modified = date
+  .set('hour', 9)
+  .set('minute', 0)
+  .set('second', 0);
+
+console.log(modified.format('HH:mm:ss'));
+// Output: 09:00:00
+```
+
+### Start and End of Period
+
+<Tabs>
+  <Tab title="Start Of">
+    ```typescript
+    const date = atemporal('2024-07-26T15:30:45Z');
+    
+    date.startOf('year');   // 2024-01-01 00:00:00
+    date.startOf('month');  // 2024-07-01 00:00:00
+    date.startOf('week');   // 2024-07-22 00:00:00 (Monday)
+    date.startOf('day');    // 2024-07-26 00:00:00
+    date.startOf('hour');   // 2024-07-26 15:00:00
+    ```
+  </Tab>
+  
+  <Tab title="End Of">
+    ```typescript
+    const date = atemporal('2024-07-26T15:30:45Z');
+    
+    date.endOf('year');    // 2024-12-31 23:59:59.999
+    date.endOf('month');   // 2024-07-31 23:59:59.999
+    date.endOf('week');    // 2024-07-28 23:59:59.999 (Sunday)
+    date.endOf('day');     // 2024-07-26 23:59:59.999
+    date.endOf('hour');    // 2024-07-26 15:59:59.999
+    ```
+  </Tab>
+</Tabs>
+
+<Note>
+  The `startOf('week')` method uses Monday as the first day of the week, following the ISO 8601 standard.
+</Note>
+
+## Comparing Dates
+
+Atemporal provides comprehensive comparison methods.
+
+### Basic Comparisons
+
+```typescript
+const date1 = atemporal('2024-01-01');
+const date2 = atemporal('2024-06-15');
+
+date1.isBefore(date2);       // true
+date1.isAfter(date2);        // false
+date1.isSameOrBefore(date2); // true
+date1.isSameOrAfter(date2);  // false
+```
+
+### Equality Checks
+
+```typescript
+const date1 = atemporal('2024-06-15T10:30:00Z');
+const date2 = atemporal('2024-06-15T14:30:00Z');
+
+// Exact equality (to millisecond)
+date1.isSame(date2);           // false
+
+// Same day
+date1.isSame(date2, 'day');    // true
+date1.isSameDay(date2);        // true
+
+// Same month
+date1.isSame(date2, 'month');  // true
+
+// Same year
+date1.isSame(date2, 'year');   // true
+```
+
+### Range Checks
+
+Check if a date falls within a range:
+
+```typescript
+const date = atemporal('2024-06-15');
+const start = atemporal('2024-01-01');
+const end = atemporal('2024-12-31');
+
+date.isBetween(start, end);         // true (inclusive)
+date.isBetween(start, end, '[]');   // true (both inclusive)
+date.isBetween(start, end, '()');   // true (both exclusive)
+date.isBetween(start, end, '[)');   // true (start inclusive)
+date.isBetween(start, end, '(]');   // true (end inclusive)
+```
+
+### Calculating Differences
+
+```typescript
+const d1 = atemporal('2024-01-01T12:00:00Z');
+const d2 = atemporal('2024-01-02T18:00:00Z');
+
+// Truncated integer difference (default)
+d2.diff(d1, 'day');         // 1
+d2.diff(d1, 'hour');        // 30
+d2.diff(d1, 'minute');      // 1800
+
+// Floating point difference
+d2.diff(d1, 'day', true);   // 1.25
+d2.diff(d1, 'hour', true);  // 30.0
+```
+
+<Note>
+  The `diff` method returns a truncated integer by default. Pass `true` as the third argument to get floating-point precision.
+</Note>
+
+## Converting Between Types
+
+Atemporal makes it easy to convert between different date representations.
+
+### To JavaScript Date
+
+```typescript
+const date = atemporal('2024-07-26T15:30:00Z');
+const jsDate = date.toDate();
+console.log(jsDate instanceof Date); // true
+```
+
+### To String
+
+```typescript
+const date = atemporal('2024-07-26T15:30:00.123Z');
+
+// ISO 8601 string
+console.log(date.toString());
+// Output: 2024-07-26T15:30:00.123Z
+
+// Custom format (see Formatting guide)
+console.log(date.format('YYYY-MM-DD'));
+// Output: 2024-07-26
+```
+
+### To Temporal Objects
+
+Access the underlying Temporal.ZonedDateTime:
+
+```typescript
+const date = atemporal('2024-07-26T15:30:00Z');
+
+// Via .datetime getter
+const temporal = date.datetime;
+
+// Via .raw getter (alias)
+const raw = date.raw;
+
+console.log(temporal.epochMilliseconds);
+```
+
+<Warning>
+  Accessing `.datetime` or `.raw` throws an error if the instance is invalid. Always check validity first with `.isValid()`.
+</Warning>
+
+## Working with Ranges
+
+Generate arrays of dates within a range:
+
+```typescript
+const start = atemporal('2023-01-01');
+const end = atemporal('2023-01-05');
+
+// Array of Atemporal instances
+const days = start.range(end, 'day');
+console.log(days.length); // 5 (inclusive)
+
+// Array of formatted strings
+const formatted = start.range(end, 'day', {
+  format: 'YYYY-MM-DD'
+});
+// Output: ['2023-01-01', '2023-01-02', '2023-01-03', '2023-01-04', '2023-01-05']
+
+// Exclusive ranges
+const exclusive = start.range(end, 'day', {
+  inclusivity: '()'
+});
+console.log(exclusive.length); // 3 (excludes both ends)
+```
+
+## Getting Values
+
+Access individual date components:
+
+```typescript
+const date = atemporal('2024-07-26T15:30:45.123Z');
+
+// Direct property access
+date.year;         // 2024
+date.month;        // 7
+date.day;          // 26
+date.hour;         // 15
+date.minute;       // 30
+date.second;       // 45
+date.millisecond;  // 123
+
+// Via get() method
+date.get('year');   // 2024
+date.get('month');  // 7
+
+// Week information
+date.weekOfYear;    // 30
+date.dayOfWeek();   // 5 (Friday, 1=Monday)
+date.dayOfWeekName; // "Friday"
+
+// Quarter
+date.quarter();     // 3 (Q3)
+
+// Days in month
+date.daysInMonth;   // 31
+
+// Leap year
+date.isLeapYear();  // true
+```
+
+## Finding Min/Max Dates
+
+```typescript
+import atemporal from 'atemporal';
+
+const dates = [
+  atemporal('2024-03-15'),
+  atemporal('2024-01-01'),
+  atemporal('2024-12-31')
+];
+
+// Find earliest date
+const earliest = atemporal.min(dates);
+console.log(earliest.format('YYYY-MM-DD'));
+// Output: 2024-01-01
+
+// Find latest date
+const latest = atemporal.max(dates);
+console.log(latest.format('YYYY-MM-DD'));
+// Output: 2024-12-31
+
+// Also works with spread arguments
+const min = atemporal.min(
+  '2024-03-15',
+  '2024-01-01',
+  '2024-12-31'
+);
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Time Zones" icon="globe" href="/concepts/time-zones">
+    Learn how to work with IANA time zones and convert between zones
+  </Card>
+  <Card title="Formatting" icon="calendar" href="/concepts/formatting">
+    Format dates with custom tokens and locales
+  </Card>
+  <Card title="Immutability" icon="lock" href="/concepts/immutability">
+    Understand how immutability keeps your dates safe
+  </Card>
+</CardGroup>

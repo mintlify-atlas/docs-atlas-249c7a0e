@@ -1,0 +1,222 @@
+---
+title: "WeekDay Plugin"
+description: "Locale-aware week functionality with configurable week start days and enhanced weekday methods"
+---
+
+## Overview
+
+The WeekDay plugin adds locale-aware week functionality to Atemporal. It allows you to set the start of the week and provides methods that respect that setting, making it easy to work with different calendar systems and locales.
+
+## Installation
+
+### Using extend()
+
+```typescript
+import atemporal from 'atemporal';
+import weekDayPlugin from 'atemporal/plugins/weekDay';
+
+atemporal.extend(weekDayPlugin);
+```
+
+### Using lazyLoad()
+
+```typescript
+import atemporal from 'atemporal';
+
+atemporal.lazyLoad('weekDay');
+```
+
+## Configuration
+
+### setWeekStartsOn()
+
+Sets the global start of the week for all atemporal instances.
+
+```typescript
+atemporal.setWeekStartsOn(day: 0 | 1 | 2 | 3 | 4 | 5 | 6): void
+```
+
+**Parameters:**
+- `day` - The day to set as the start of the week
+  - `0` = Sunday
+  - `1` = Monday (ISO 8601 standard)
+  - `2` = Tuesday
+  - `3` = Wednesday
+  - `4` = Thursday
+  - `5` = Friday
+  - `6` = Saturday
+
+**Example:**
+
+```typescript
+// Set week to start on Monday (ISO 8601)
+atemporal.setWeekStartsOn(1);
+
+// Set week to start on Sunday (US standard)
+atemporal.setWeekStartsOn(0);
+
+// Set week to start on Saturday (Middle East)
+atemporal.setWeekStartsOn(6);
+```
+
+## Instance Methods
+
+### weekday()
+
+Gets the day of the week according to the locale's configured start day.
+
+```typescript
+weekday(): number
+```
+
+**Returns:** `number` - Day of the week (0-6) relative to the configured week start
+
+**Example:**
+
+```typescript
+// Week starts on Sunday (default)
+atemporal.setWeekStartsOn(0);
+const date = atemporal('2024-01-15'); // Monday
+date.weekday(); // 1 (Monday is 1 day after Sunday)
+
+// Week starts on Monday (ISO 8601)
+atemporal.setWeekStartsOn(1);
+date.weekday(); // 0 (Monday is the first day)
+```
+
+### startOf('week')
+
+Returns a new instance set to the start of the week, respecting the locale's configured start day.
+
+```typescript
+startOf(unit: 'week'): TemporalWrapper
+```
+
+**Parameters:**
+- `unit` - Must be `'week'` for week-aware behavior
+
+**Returns:** `TemporalWrapper` - New instance at the start of the week
+
+**Example:**
+
+```typescript
+// Week starts on Monday
+atemporal.setWeekStartsOn(1);
+const date = atemporal('2024-01-15'); // Monday, January 15
+const weekStart = date.startOf('week');
+weekStart.format('YYYY-MM-DD'); // '2024-01-15' (Monday)
+
+// Week starts on Sunday
+atemporal.setWeekStartsOn(0);
+const weekStart2 = date.startOf('week');
+weekStart2.format('YYYY-MM-DD'); // '2024-01-14' (Sunday)
+```
+
+### endOf('week')
+
+Returns a new instance set to the end of the week, respecting the locale's configured start day.
+
+```typescript
+endOf(unit: 'week'): TemporalWrapper
+```
+
+**Parameters:**
+- `unit` - Must be `'week'` for week-aware behavior
+
+**Returns:** `TemporalWrapper` - New instance at the end of the week (last millisecond)
+
+**Example:**
+
+```typescript
+// Week starts on Monday (ends on Sunday)
+atemporal.setWeekStartsOn(1);
+const date = atemporal('2024-01-15'); // Monday, January 15
+const weekEnd = date.endOf('week');
+weekEnd.format('YYYY-MM-DD'); // '2024-01-21' (Sunday)
+
+// Week starts on Sunday (ends on Saturday)
+atemporal.setWeekStartsOn(0);
+const weekEnd2 = date.endOf('week');
+weekEnd2.format('YYYY-MM-DD'); // '2024-01-20' (Saturday)
+```
+
+## Performance Features
+
+The WeekDay plugin includes built-in caching for improved performance:
+
+- **Weekday Cache**: Caches weekday calculations (100 entries)
+- **Week Boundary Cache**: Caches week start/end computations (50 entries)
+- **LRU Eviction**: Automatically removes least recently used entries
+
+### Cache Management
+
+```typescript
+// Clear the cache
+atemporal.clearWeekDayCache();
+
+// Get cache statistics
+const stats = atemporal.getWeekDayCacheStats();
+console.log(stats);
+// {
+//   weekDay: {
+//     weekday: { size: 45, maxSize: 100 },
+//     weekBoundary: { size: 23, maxSize: 50 }
+//   }
+// }
+```
+
+## Complete Example
+
+```typescript
+import atemporal from 'atemporal';
+import weekDayPlugin from 'atemporal/plugins/weekDay';
+
+atemporal.extend(weekDayPlugin);
+
+// Configure for ISO 8601 (Monday start)
+atemporal.setWeekStartsOn(1);
+
+const date = atemporal('2024-01-17'); // Wednesday
+
+// Get weekday (0 = Monday, 1 = Tuesday, 2 = Wednesday, ...)
+console.log(date.weekday()); // 2
+
+// Get week boundaries
+const weekStart = date.startOf('week');
+const weekEnd = date.endOf('week');
+
+console.log(weekStart.format('YYYY-MM-DD')); // '2024-01-15' (Monday)
+console.log(weekEnd.format('YYYY-MM-DD'));   // '2024-01-21' (Sunday)
+
+// Switch to US convention (Sunday start)
+atemporal.setWeekStartsOn(0);
+
+const usWeekStart = date.startOf('week');
+const usWeekEnd = date.endOf('week');
+
+console.log(usWeekStart.format('YYYY-MM-DD')); // '2024-01-14' (Sunday)
+console.log(usWeekEnd.format('YYYY-MM-DD'));   // '2024-01-20' (Saturday)
+```
+
+## Localization Support
+
+The plugin works seamlessly with different locale conventions:
+
+```typescript
+// ISO 8601 (Europe, most of the world)
+atemporal.setWeekStartsOn(1); // Monday
+
+// US, Canada, Japan
+atemporal.setWeekStartsOn(0); // Sunday
+
+// Middle East (some countries)
+atemporal.setWeekStartsOn(6); // Saturday
+```
+
+## Notes
+
+- The plugin enhances existing `startOf()` and `endOf()` methods for the `'week'` unit
+- Other units (`'year'`, `'month'`, `'day'`, etc.) work as usual
+- The configuration is global and affects all atemporal instances
+- Invalid dates return `NaN` for `weekday()` and the original instance for `startOf()`/`endOf()`
+- The plugin uses internal caching for optimal performance with repeated calculations

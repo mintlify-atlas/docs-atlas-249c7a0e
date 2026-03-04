@@ -1,0 +1,329 @@
+---
+title: "TimeSlots Plugin"
+description: "Schedule slot management and finding available time slots within date ranges"
+---
+
+## Overview
+
+The TimeSlots plugin adds functionality to find available time slots within a given date range while considering busy periods. This is perfect for scheduling applications, calendar management, appointment booking, and resource allocation.
+
+## Installation
+
+### Using extend()
+
+```typescript
+import atemporal from 'atemporal';
+import timeSlotsPlugin from 'atemporal/plugins/timeSlots';
+
+atemporal.extend(timeSlotsPlugin);
+```
+
+### Using lazyLoad()
+
+```typescript
+import atemporal from 'atemporal';
+
+atemporal.lazyLoad('timeSlots');
+```
+
+## Types
+
+### TimeSlot
+
+Represents a time period with start and end times.
+
+```typescript
+interface TimeSlot {
+  start: DateInput; // Date, string, or TemporalWrapper
+  end: DateInput;
+}
+```
+
+### AvailabilityOptions
+
+Configuration options for finding available slots.
+
+```typescript
+interface AvailabilityOptions {
+  // The overall window to search for slots
+  range: TimeSlot;
+  
+  // The duration of the desired slot
+  duration: {
+    years?: number;
+    months?: number;
+    weeks?: number;
+    days?: number;
+    hours?: number;
+    minutes?: number;
+    seconds?: number;
+    milliseconds?: number;
+  };
+  
+  // How frequently to check for a new slot
+  // Defaults to the value of `duration` if not provided
+  interval?: {
+    years?: number;
+    months?: number;
+    weeks?: number;
+    days?: number;
+    hours?: number;
+    minutes?: number;
+    seconds?: number;
+    milliseconds?: number;
+  };
+  
+  // Array of busy periods to avoid
+  busySlots: TimeSlot[];
+}
+```
+
+## Factory Methods
+
+### findAvailableSlots()
+
+Finds all available time slots of a specified duration within a date range, avoiding busy periods.
+
+```typescript
+atemporal.findAvailableSlots(options: AvailabilityOptions): TemporalWrapper[]
+```
+
+**Parameters:**
+- `options` - Configuration object (see `AvailabilityOptions` above)
+
+**Returns:** `TemporalWrapper[]` - Array of start times for available slots
+
+**Example:**
+
+```typescript
+// Find 1-hour meeting slots
+const available = atemporal.findAvailableSlots({
+  range: {
+    start: '2024-01-15T09:00:00',
+    end: '2024-01-15T17:00:00'
+  },
+  duration: { hours: 1 },
+  busySlots: [
+    { start: '2024-01-15T10:00:00', end: '2024-01-15T11:00:00' },
+    { start: '2024-01-15T14:00:00', end: '2024-01-15T15:30:00' }
+  ]
+});
+
+// Display available slots
+available.forEach(slot => {
+  const end = slot.add({ hours: 1 });
+  console.log(`${slot.format('HH:mm')} - ${end.format('HH:mm')}`);
+});
+// Output:
+// 09:00 - 10:00
+// 11:00 - 12:00
+// 12:00 - 13:00
+// 13:00 - 14:00
+// 15:30 - 16:30
+```
+
+## Algorithm Features
+
+### Overlapping Busy Slots
+
+The plugin automatically merges overlapping or touching busy slots for optimal performance:
+
+```typescript
+const available = atemporal.findAvailableSlots({
+  range: {
+    start: '2024-01-15T09:00:00',
+    end: '2024-01-15T17:00:00'
+  },
+  duration: { hours: 1 },
+  busySlots: [
+    { start: '2024-01-15T10:00:00', end: '2024-01-15T12:00:00' },
+    { start: '2024-01-15T11:00:00', end: '2024-01-15T13:00:00' }, // Overlaps with previous
+    { start: '2024-01-15T13:00:00', end: '2024-01-15T14:00:00' }  // Touches previous
+  ]
+});
+// Treats the above as one merged busy period: 10:00-14:00
+```
+
+### Custom Intervals
+
+Control how frequently the algorithm checks for available slots:
+
+```typescript
+// Check every 30 minutes for 1-hour slots
+const available = atemporal.findAvailableSlots({
+  range: {
+    start: '2024-01-15T09:00:00',
+    end: '2024-01-15T17:00:00'
+  },
+  duration: { hours: 1 },
+  interval: { minutes: 30 }, // Check every 30 minutes
+  busySlots: []
+});
+// Returns: 09:00, 09:30, 10:00, 10:30, ..., 15:30, 16:00
+```
+
+### Boundary Handling
+
+Slots are checked with exclusive end boundaries - a slot ending at 10:00 doesn't conflict with a busy period starting at 10:00:
+
+```typescript
+const available = atemporal.findAvailableSlots({
+  range: {
+    start: '2024-01-15T09:00:00',
+    end: '2024-01-15T12:00:00'
+  },
+  duration: { hours: 1 },
+  busySlots: [
+    { start: '2024-01-15T10:00:00', end: '2024-01-15T11:00:00' }
+  ]
+});
+// Returns: 09:00 (09:00-10:00 is valid, ending exactly when busy starts)
+//          11:00 (11:00-12:00 is valid, starting exactly when busy ends)
+```
+
+## Complete Examples
+
+### Meeting Room Scheduler
+
+```typescript
+import atemporal from 'atemporal';
+import timeSlotsPlugin from 'atemporal/plugins/timeSlots';
+
+atemporal.extend(timeSlotsPlugin);
+
+// Find 2-hour slots for a conference room
+const roomAvailability = atemporal.findAvailableSlots({
+  range: {
+    start: '2024-01-15T08:00:00',
+    end: '2024-01-15T18:00:00'
+  },
+  duration: { hours: 2 },
+  busySlots: [
+    { start: '2024-01-15T09:00:00', end: '2024-01-15T10:30:00' },
+    { start: '2024-01-15T13:00:00', end: '2024-01-15T15:00:00' },
+    { start: '2024-01-15T16:00:00', end: '2024-01-15T17:00:00' }
+  ]
+});
+
+console.log('Available 2-hour slots:');
+roomAvailability.forEach(slot => {
+  const end = slot.add({ hours: 2 });
+  console.log(`${slot.format('HH:mm')} - ${end.format('HH:mm')}`);
+});
+// Output:
+// 10:30 - 12:30
+// 15:00 - 17:00
+```
+
+### Doctor's Appointment Booking
+
+```typescript
+// 30-minute appointment slots
+const appointmentSlots = atemporal.findAvailableSlots({
+  range: {
+    start: '2024-01-15T09:00:00',
+    end: '2024-01-15T13:00:00'
+  },
+  duration: { minutes: 30 },
+  interval: { minutes: 15 }, // Check every 15 minutes
+  busySlots: [
+    { start: '2024-01-15T09:30:00', end: '2024-01-15T10:00:00' },
+    { start: '2024-01-15T11:00:00', end: '2024-01-15T11:45:00' }
+  ]
+});
+
+console.log('Available appointment times:');
+appointmentSlots.forEach(slot => {
+  console.log(slot.format('hh:mm A'));
+});
+```
+
+### Multi-Day Resource Allocation
+
+```typescript
+// Find 3-day slots for a project
+const projectSlots = atemporal.findAvailableSlots({
+  range: {
+    start: '2024-01-01',
+    end: '2024-01-31'
+  },
+  duration: { days: 3 },
+  interval: { days: 1 }, // Check daily
+  busySlots: [
+    { start: '2024-01-05', end: '2024-01-08' },
+    { start: '2024-01-15', end: '2024-01-20' },
+    { start: '2024-01-25', end: '2024-01-27' }
+  ]
+});
+
+console.log('Available 3-day project windows:');
+projectSlots.forEach(slot => {
+  const end = slot.add({ days: 3 });
+  console.log(`${slot.format('MMM DD')} - ${end.format('MMM DD')}`);
+});
+```
+
+### Calendar Integration
+
+```typescript
+function findMeetingTime(
+  attendees: Array<{ busyTimes: TimeSlot[] }>,
+  date: string,
+  durationMinutes: number
+) {
+  // Merge all attendees' busy times
+  const allBusySlots = attendees.flatMap(a => a.busyTimes);
+  
+  const available = atemporal.findAvailableSlots({
+    range: {
+      start: `${date}T09:00:00`,
+      end: `${date}T17:00:00`
+    },
+    duration: { minutes: durationMinutes },
+    busySlots: allBusySlots
+  });
+  
+  return available.length > 0 ? available[0] : null;
+}
+
+// Usage
+const meetingTime = findMeetingTime(
+  [
+    {
+      busyTimes: [
+        { start: '2024-01-15T10:00:00', end: '2024-01-15T11:00:00' }
+      ]
+    },
+    {
+      busyTimes: [
+        { start: '2024-01-15T09:00:00', end: '2024-01-15T09:30:00' }
+      ]
+    }
+  ],
+  '2024-01-15',
+  60
+);
+
+if (meetingTime) {
+  console.log(`Meeting scheduled at ${meetingTime.format('HH:mm')}`);
+} else {
+  console.log('No available time slots');
+}
+```
+
+## Performance Considerations
+
+- Busy slots are automatically sorted and merged for efficient checking
+- The algorithm stops as soon as slots exceed the search range
+- Invalid date inputs are filtered out early
+- For large datasets, consider chunking the search range
+
+## Notes
+
+- All times use the Temporal API's precise time handling
+- Date inputs can be strings (ISO 8601), Date objects, or TemporalWrapper instances
+- Invalid dates in the range or busy slots are automatically filtered out
+- The algorithm uses exclusive end boundaries (a slot ending at 10:00 doesn't conflict with a busy period starting at 10:00)
+- If no `interval` is specified, it defaults to the `duration` value
+- Empty arrays are returned if no slots are available
+- The search stops when potential slots would exceed the window end

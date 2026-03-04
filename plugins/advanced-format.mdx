@@ -1,0 +1,339 @@
+---
+title: "Advanced Format Plugin"
+description: "Add ordinal numbers and timezone name formatting to the format method"
+---
+
+## Overview
+
+The Advanced Format plugin extends the `.format()` method with additional tokens for ordinal formatting and timezone names. It builds on top of the core formatting functionality with intelligent caching for optimal performance.
+
+## Installation
+
+Load the plugin using either `extend` or `lazyLoad`:
+
+```javascript
+import atemporal from '@atemporal/core';
+import advancedFormatPlugin from '@atemporal/core/plugins/advancedFormat';
+
+// Option 1: Load immediately
+atemporal.extend(advancedFormatPlugin);
+
+// Option 2: Lazy load on first use
+atemporal.lazyLoad(advancedFormatPlugin);
+```
+
+## Additional Format Tokens
+
+This plugin adds four new format tokens:
+
+| Token | Description | Example Output |
+|-------|-------------|----------------|
+| `Do` | Day of month with ordinal | `1st`, `2nd`, `3rd`, `21st` |
+| `Qo` | Quarter of year with ordinal | `1st`, `2nd`, `3rd`, `4th` |
+| `zzz` | Short timezone name | `PST`, `EST`, `GMT` |
+| `zzzz` | Full timezone name | `Pacific Standard Time` |
+
+## Methods
+
+### `.format(templateString, locale?)`
+
+The existing `.format()` method is extended to support the new tokens. All core format tokens remain available.
+
+**Signature:**
+```typescript
+format(templateOrOptions?: string | Intl.DateTimeFormatOptions, localeCode?: string): string
+```
+
+**Examples:**
+```javascript
+atemporal('2023-12-25').format('MMMM Do, YYYY');
+// "December 25th, 2023"
+
+atemporal('2023-03-15').format('Qo [quarter]');
+// "1st quarter"
+
+atemporal().format('HH:mm zzz');
+// "14:30 PST"
+
+atemporal().format('zzzz');
+// "Pacific Standard Time"
+```
+
+## Ordinal Formatting
+
+### Day of Month (`Do`)
+
+Formats the day of the month with the appropriate ordinal suffix.
+
+**Examples:**
+```javascript
+atemporal('2023-01-01').format('Do');
+// "1st"
+
+atemporal('2023-01-02').format('Do');
+// "2nd"
+
+atemporal('2023-01-03').format('Do');
+// "3rd"
+
+atemporal('2023-01-04').format('Do');
+// "4th"
+
+atemporal('2023-01-21').format('Do');
+// "21st"
+
+atemporal('2023-01-22').format('Do');
+// "22nd"
+
+atemporal('2023-01-23').format('Do');
+// "23rd"
+```
+
+### Quarter (`Qo`)
+
+Formats the quarter of the year with ordinal suffix.
+
+**Examples:**
+```javascript
+atemporal('2023-01-15').format('Qo');
+// "1st"
+
+atemporal('2023-06-15').format('Qo');
+// "2nd"
+
+atemporal('2023-09-15').format('Qo');
+// "3rd"
+
+atemporal('2023-12-15').format('Qo');
+// "4th"
+```
+
+## Localized Ordinals
+
+Ordinals are automatically localized based on the locale setting:
+
+### English (`en`)
+```javascript
+atemporal.setDefaultLocale('en');
+atemporal('2023-01-01').format('Do');
+// "1st"
+```
+
+### Spanish (`es`)
+```javascript
+atemporal.setDefaultLocale('es');
+atemporal('2023-01-01').format('Do');
+// "1º"
+```
+
+### French (`fr`)
+```javascript
+atemporal.setDefaultLocale('fr');
+atemporal('2023-01-01').format('Do');
+// "1er" (premier)
+
+atemporal('2023-01-02').format('Do');
+// "2e"
+```
+
+### German (`de`)
+```javascript
+atemporal.setDefaultLocale('de');
+atemporal('2023-01-01').format('Do');
+// "1."
+```
+
+### Japanese (`ja`)
+```javascript
+atemporal.setDefaultLocale('ja');
+atemporal('2023-01-01').format('Do');
+// "1番目"
+```
+
+### Chinese (`zh`)
+```javascript
+atemporal.setDefaultLocale('zh');
+atemporal('2023-01-01').format('Do');
+// "第1" (prefix-style)
+```
+
+### Supported Ordinal Locales
+
+The plugin includes built-in ordinal support for:
+- English (`en`)
+- Spanish (`es`)
+- French (`fr`)
+- German (`de`)
+- Italian (`it`)
+- Portuguese (`pt`)
+- Russian (`ru`)
+- Japanese (`ja`)
+- Korean (`ko`)
+- Chinese (`zh`)
+
+For unsupported locales, the number is returned without an ordinal suffix.
+
+## Timezone Name Formatting
+
+### Short Timezone Name (`zzz`)
+
+Displays the abbreviated timezone name.
+
+**Examples:**
+```javascript
+// In America/Los_Angeles timezone
+atemporal('2023-12-25T14:30:00', 'America/Los_Angeles').format('zzz');
+// "PST" (during winter)
+// "PDT" (during summer - DST)
+
+// In America/New_York timezone
+atemporal('2023-06-15T14:30:00', 'America/New_York').format('zzz');
+// "EDT"
+
+// In Europe/London timezone
+atemporal('2023-01-15T14:30:00', 'Europe/London').format('zzz');
+// "GMT"
+```
+
+### Full Timezone Name (`zzzz`)
+
+Displays the full timezone name.
+
+**Examples:**
+```javascript
+// In America/Los_Angeles timezone
+atemporal('2023-12-25T14:30:00', 'America/Los_Angeles').format('zzzz');
+// "Pacific Standard Time" (during winter)
+// "Pacific Daylight Time" (during summer - DST)
+
+// In America/New_York timezone
+atemporal('2023-06-15T14:30:00', 'America/New_York').format('zzzz');
+// "Eastern Daylight Time"
+
+// In Europe/London timezone
+atemporal('2023-01-15T14:30:00', 'Europe/London').format('zzzz');
+// "Greenwich Mean Time"
+```
+
+### Localized Timezone Names
+
+Timezone names are localized based on the locale parameter:
+
+```javascript
+// English
+atemporal('2023-12-25T14:30:00', 'America/Los_Angeles')
+  .format('zzzz', 'en');
+// "Pacific Standard Time"
+
+// Spanish
+atemporal('2023-12-25T14:30:00', 'America/Los_Angeles')
+  .format('zzzz', 'es');
+// "hora estándar del Pacífico"
+
+// French
+atemporal('2023-12-25T14:30:00', 'America/Los_Angeles')
+  .format('zzzz', 'fr');
+// "heure normale du Pacifique"
+```
+
+## Daylight Saving Time (DST)
+
+Timezone names automatically adjust for DST:
+
+```javascript
+const tz = 'America/New_York';
+
+// Winter (Standard Time)
+atemporal('2023-01-15', tz).format('zzz zzzz');
+// "EST Eastern Standard Time"
+
+// Summer (Daylight Time)
+atemporal('2023-07-15', tz).format('zzz zzzz');
+// "EDT Eastern Daylight Time"
+```
+
+## Complex Format Examples
+
+### Date with Ordinals
+
+```javascript
+atemporal('2023-12-25').format('dddd, MMMM Do, YYYY');
+// "Monday, December 25th, 2023"
+
+atemporal('2023-03-21').format('[Q]Qo YYYY');
+// "Q1st 2023"
+
+atemporal('2023-12-31').format('Do [day of] YYYY');
+// "31st day of 2023"
+```
+
+### Time with Timezone
+
+```javascript
+atemporal('2023-12-25T14:30:00', 'America/Los_Angeles')
+  .format('h:mm A zzz (zzzz)');
+// "2:30 PM PST (Pacific Standard Time)"
+
+atemporal('2023-07-04T09:00:00', 'America/New_York')
+  .format('MMMM Do, YYYY [at] h:mm A zzz');
+// "July 4th, 2023 at 9:00 AM EDT"
+```
+
+### Combined Formats
+
+```javascript
+atemporal('2023-12-25T14:30:00', 'America/Los_Angeles')
+  .format('dddd, MMMM Do, YYYY [at] h:mm A zzz');
+// "Monday, December 25th, 2023 at 2:30 PM PST"
+
+atemporal('2023-06-15T16:45:30', 'Europe/Paris')
+  .format('Do MMMM YYYY, HH:mm:ss (zzzz)');
+// "15th June 2023, 16:45:30 (Central European Summer Time)"
+```
+
+## Performance
+
+The plugin includes two separate LRU caches:
+
+- **Ordinal Cache**: Stores up to 200 ordinal formatting results
+- **Timezone Cache**: Stores up to 100 timezone name formatting results
+
+This caching significantly improves performance for repeated formatting operations.
+
+### Cache Management
+
+```javascript
+// Clear all advanced format caches
+atemporal.clearAdvancedFormatCache();
+
+// Get cache statistics
+const stats = atemporal.getAdvancedFormatCacheStats();
+console.log(stats);
+// {
+//   ordinal: { size: 42, maxSize: 200 },
+//   timezone: { size: 15, maxSize: 100 }
+// }
+
+// Clear all caches (including other plugins)
+atemporal.clearAllCaches();
+
+// Get all cache statistics
+const allStats = atemporal.getAllCacheStats();
+```
+
+## Error Handling
+
+The plugin includes comprehensive error handling:
+
+- Invalid tokens return the original token string
+- Timezone formatting errors fall back to the timezone ID
+- Unsupported locales return numbers without ordinals
+- All errors are logged to console with `console.warn()`
+
+## Best Practices
+
+1. **Use locale-specific ordinals**: Set the appropriate locale for correct ordinal formatting
+2. **Include timezone context**: When displaying times, include timezone information for clarity
+3. **Test DST transitions**: Be aware that timezone names change during DST transitions
+4. **Cache benefits**: Reuse format strings to benefit from caching
+5. **Combine with core tokens**: All core format tokens work alongside advanced tokens

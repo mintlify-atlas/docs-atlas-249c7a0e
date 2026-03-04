@@ -1,0 +1,584 @@
+---
+title: 'Utilities'
+description: 'Static utility methods and helper functions for working with dates'
+---
+
+# Utilities
+
+Static utility methods available on the `atemporal` factory object.
+
+## atemporal.min()
+
+Returns the earliest date from a list of inputs.
+
+```typescript
+atemporal.min(...args: (DateInput | DateInput[])[]): TemporalWrapper
+```
+
+<ParamField path="args" type="DateInput | DateInput[]" required>
+  Spread arguments or an array of date inputs
+</ParamField>
+
+<ResponseField name="return" type="TemporalWrapper">
+  The earliest date from the inputs
+</ResponseField>
+
+### Examples
+
+```typescript
+import atemporal from 'atemporal';
+
+// Spread arguments
+const earliest = atemporal.min(
+  '2024-01-15',
+  '2024-03-20',
+  '2024-02-10'
+);
+console.log(earliest.format('YYYY-MM-DD')); // '2024-01-15'
+
+// Array input
+const dates = [
+  atemporal('2024-06-15'),
+  atemporal('2024-01-20'),
+  atemporal('2024-12-01')
+];
+const min = atemporal.min(dates);
+console.log(min.format('YYYY-MM-DD')); // '2024-01-20'
+
+// Mixed types
+const result = atemporal.min(
+  new Date('2024-01-01'),
+  1705318200000,
+  '2024-02-01'
+);
+```
+
+<Warning>
+  Throws `InvalidDateError` if no arguments are provided or if any input is invalid.
+</Warning>
+
+---
+
+## atemporal.max()
+
+Returns the latest date from a list of inputs.
+
+```typescript
+atemporal.max(...args: (DateInput | DateInput[])[]): TemporalWrapper
+```
+
+<ParamField path="args" type="DateInput | DateInput[]" required>
+  Spread arguments or an array of date inputs
+</ParamField>
+
+<ResponseField name="return" type="TemporalWrapper">
+  The latest date from the inputs
+</ResponseField>
+
+### Examples
+
+```typescript
+// Spread arguments
+const latest = atemporal.max(
+  '2024-01-15',
+  '2024-03-20',
+  '2024-02-10'
+);
+console.log(latest.format('YYYY-MM-DD')); // '2024-03-20'
+
+// Array input
+const dates = [
+  atemporal('2024-06-15'),
+  atemporal('2024-01-20'),
+  atemporal('2024-12-01')
+];
+const max = atemporal.max(dates);
+console.log(max.format('YYYY-MM-DD')); // '2024-12-01'
+```
+
+---
+
+## atemporal.isValid()
+
+Checks if a given input can be parsed into a valid date.
+
+```typescript
+atemporal.isValid(input: any): boolean
+```
+
+<ParamField path="input" type="any" required>
+  The value to validate
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  `true` if the input can be parsed into a valid date, `false` otherwise
+</ResponseField>
+
+### Examples
+
+```typescript
+atemporal.isValid('2024-01-15');        // true
+atemporal.isValid('2024-13-45');        // false (invalid date)
+atemporal.isValid('invalid');           // false
+atemporal.isValid(1705318200000);       // true
+atemporal.isValid(new Date());          // true
+atemporal.isValid(NaN);                 // false
+atemporal.isValid(null);                // false
+atemporal.isValid(undefined);           // false
+
+// Check before parsing
+const userInput = '2024-01-15';
+if (atemporal.isValid(userInput)) {
+  const date = atemporal(userInput);
+  console.log(date.format('YYYY-MM-DD'));
+}
+```
+
+---
+
+## atemporal.isAtemporal()
+
+Checks if a given input is an instance of an Atemporal object. Acts as a TypeScript type guard.
+
+```typescript
+atemporal.isAtemporal(input: any): input is TemporalWrapper
+```
+
+<ParamField path="input" type="any" required>
+  The value to check
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  `true` if the input is an Atemporal instance, `false` otherwise
+</ResponseField>
+
+### Examples
+
+```typescript
+const date = atemporal();
+const jsDate = new Date();
+
+atemporal.isAtemporal(date);          // true
+atemporal.isAtemporal(jsDate);        // false
+atemporal.isAtemporal('2024-01-15');  // false
+
+// TypeScript type guard
+function processDate(input: any) {
+  if (atemporal.isAtemporal(input)) {
+    // TypeScript knows input is TemporalWrapper here
+    console.log(input.format('YYYY-MM-DD'));
+  }
+}
+```
+
+---
+
+## atemporal.isDuration()
+
+Checks if a given input is an instance of `Temporal.Duration`.
+
+```typescript
+atemporal.isDuration(input: any): input is Temporal.Duration
+```
+
+<ParamField path="input" type="any" required>
+  The value to check
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  `true` if the input is a Temporal.Duration, `false` otherwise
+</ResponseField>
+
+### Examples
+
+```typescript
+const duration = atemporal.duration({ hours: 2 });
+const date = atemporal();
+
+atemporal.isDuration(duration);        // true
+atemporal.isDuration(date);            // false
+atemporal.isDuration({ hours: 2 });    // false (plain object)
+```
+
+---
+
+## atemporal.isValidTimeZone()
+
+Checks if a string is a valid and supported IANA time zone identifier.
+
+```typescript
+atemporal.isValidTimeZone(tz: string): boolean
+```
+
+<ParamField path="tz" type="string" required>
+  The time zone identifier to validate
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  `true` if the time zone is valid, `false` otherwise
+</ResponseField>
+
+### Examples
+
+```typescript
+atemporal.isValidTimeZone('America/New_York');  // true
+atemporal.isValidTimeZone('Europe/London');     // true
+atemporal.isValidTimeZone('Asia/Tokyo');        // true
+atemporal.isValidTimeZone('UTC');               // true
+atemporal.isValidTimeZone('Invalid/Zone');      // false
+atemporal.isValidTimeZone('EST');               // false (abbreviations not supported)
+
+// Validate user input
+const userTimezone = 'America/Chicago';
+if (atemporal.isValidTimeZone(userTimezone)) {
+  const date = atemporal('2024-01-15', userTimezone);
+}
+```
+
+---
+
+## atemporal.isValidLocale()
+
+Checks if a string is a structurally valid locale identifier.
+
+```typescript
+atemporal.isValidLocale(code: string): boolean
+```
+
+<ParamField path="code" type="string" required>
+  The locale code to validate
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  `true` if the locale is valid, `false` otherwise
+</ResponseField>
+
+### Examples
+
+```typescript
+atemporal.isValidLocale('en-US');     // true
+atemporal.isValidLocale('es-MX');     // true
+atemporal.isValidLocale('fr-FR');     // true
+atemporal.isValidLocale('ja');        // true
+atemporal.isValidLocale('invalid');   // false
+atemporal.isValidLocale('en_US');     // false (should use hyphen)
+```
+
+---
+
+## atemporal.setDefaultLocale()
+
+Sets the default locale for all new Atemporal instances. Used for formatting.
+
+```typescript
+atemporal.setDefaultLocale(code: string): void
+```
+
+<ParamField path="code" type="string" required>
+  The locale code to set as default (e.g., 'en-US', 'es-MX', 'fr-FR')
+</ParamField>
+
+### Examples
+
+```typescript
+// Set default locale
+atemporal.setDefaultLocale('es-MX');
+
+const date = atemporal('2024-01-15');
+date.format('MMMM D, YYYY');  // 'enero 15, 2024'
+
+// Change default locale
+atemporal.setDefaultLocale('fr-FR');
+date.format('MMMM D, YYYY');  // 'janvier 15, 2024'
+```
+
+---
+
+## atemporal.getDefaultLocale()
+
+Gets the currently configured default locale.
+
+```typescript
+atemporal.getDefaultLocale(): string
+```
+
+<ResponseField name="return" type="string">
+  The current default locale code
+</ResponseField>
+
+### Examples
+
+```typescript
+atemporal.setDefaultLocale('es-MX');
+const locale = atemporal.getDefaultLocale();
+console.log(locale); // 'es-MX'
+```
+
+---
+
+## atemporal.setDefaultTimeZone()
+
+Sets the default IANA time zone for all new Atemporal instances.
+
+```typescript
+atemporal.setDefaultTimeZone(tz: string): void
+```
+
+<ParamField path="tz" type="string" required>
+  The IANA time zone identifier to set as default
+</ParamField>
+
+### Examples
+
+```typescript
+// Set default timezone
+atemporal.setDefaultTimeZone('America/New_York');
+
+const date = atemporal('2024-01-15T10:00:00');
+console.log(date.timeZoneId); // 'America/New_York'
+
+// Change default timezone
+atemporal.setDefaultTimeZone('Europe/London');
+const date2 = atemporal('2024-01-15T10:00:00');
+console.log(date2.timeZoneId); // 'Europe/London'
+```
+
+<Warning>
+  Throws `InvalidTimeZoneError` if the time zone is not valid.
+</Warning>
+
+---
+
+## atemporal.isPlugin()
+
+Checks if a given function has the shape of an Atemporal plugin.
+
+```typescript
+atemporal.isPlugin(input: any): input is Plugin
+```
+
+<ParamField path="input" type="any" required>
+  The value to check
+</ParamField>
+
+<ResponseField name="return" type="boolean">
+  `true` if the input is a valid plugin, `false` otherwise
+</ResponseField>
+
+### Examples
+
+```typescript
+import relativeTimePlugin from 'atemporal/plugins/relativeTime';
+
+atemporal.isPlugin(relativeTimePlugin);  // true
+atemporal.isPlugin(() => {});            // false (wrong signature)
+atemporal.isPlugin('not a function');    // false
+```
+
+---
+
+## atemporal.extend()
+
+Extends Atemporal's functionality with a plugin.
+
+```typescript
+atemporal.extend(plugin: Plugin, options?: any): void
+```
+
+<ParamField path="plugin" type="Plugin" required>
+  The plugin function to apply
+</ParamField>
+
+<ParamField path="options" type="any" optional>
+  Optional configuration for the plugin
+</ParamField>
+
+### Examples
+
+```typescript
+import atemporal from 'atemporal';
+import relativeTimePlugin from 'atemporal/plugins/relativeTime';
+
+// Extend with plugin
+atemporal.extend(relativeTimePlugin);
+
+// Now use plugin methods
+const date = atemporal().subtract(2, 'hours');
+console.log(date.fromNow()); // '2 hours ago'
+
+// With options
+import customParseFormatPlugin from 'atemporal/plugins/customParseFormat';
+atemporal.extend(customParseFormatPlugin, {
+  strictMode: true
+});
+```
+
+<Note>
+  Plugins are only applied once. Duplicate calls are ignored.
+</Note>
+
+---
+
+## Plugin Management
+
+### atemporal.lazyLoad()
+
+Loads a plugin lazily (on-demand) when needed.
+
+```typescript
+atemporal.lazyLoad(pluginName: string, options?: any): Promise<void>
+```
+
+<ParamField path="pluginName" type="string" required>
+  Name of the plugin to load
+</ParamField>
+
+<ParamField path="options" type="any" optional>
+  Optional configuration for the plugin
+</ParamField>
+
+### Examples
+
+```typescript
+// Load plugin lazily
+await atemporal.lazyLoad('relativeTime');
+
+// With options
+await atemporal.lazyLoad('customParseFormat', {
+  strictMode: true
+});
+```
+
+### atemporal.lazyLoadMultiple()
+
+Loads multiple plugins at once.
+
+```typescript
+atemporal.lazyLoadMultiple(
+  pluginNames: string[],
+  options?: Record<string, any>
+): Promise<void>
+```
+
+### Examples
+
+```typescript
+// Load multiple plugins
+await atemporal.lazyLoadMultiple([
+  'relativeTime',
+  'advancedFormat',
+  'durationHumanizer'
+]);
+
+// With individual options
+await atemporal.lazyLoadMultiple(
+  ['relativeTime', 'customParseFormat'],
+  {
+    relativeTime: { thresholds: { s: 60 } },
+    customParseFormat: { strictMode: true }
+  }
+);
+```
+
+### atemporal.isPluginLoaded()
+
+Checks if a specific plugin has been loaded.
+
+```typescript
+atemporal.isPluginLoaded(pluginName: string): boolean
+```
+
+### Examples
+
+```typescript
+if (!atemporal.isPluginLoaded('relativeTime')) {
+  await atemporal.lazyLoad('relativeTime');
+}
+```
+
+### atemporal.getLoadedPlugins()
+
+Gets the list of all plugins that have been loaded.
+
+```typescript
+atemporal.getLoadedPlugins(): string[]
+```
+
+### Examples
+
+```typescript
+const loaded = atemporal.getLoadedPlugins();
+console.log(loaded); // ['relativeTime', 'advancedFormat']
+```
+
+### atemporal.getAvailablePlugins()
+
+Gets the list of all available plugins.
+
+```typescript
+atemporal.getAvailablePlugins(): string[]
+```
+
+### Examples
+
+```typescript
+const available = atemporal.getAvailablePlugins();
+console.log(available);
+/*
+[
+  'relativeTime',
+  'customParseFormat',
+  'advancedFormat',
+  'durationHumanizer',
+  'weekDay',
+  'dateRangeOverlap',
+  'businessDays',
+  'timeSlots'
+]
+*/
+```
+
+---
+
+## System Information
+
+### atemporal.getTemporalInfo()
+
+Gets information about the current Temporal implementation being used.
+
+```typescript
+atemporal.getTemporalInfo(): {
+  isNative: boolean;
+  environment: 'browser' | 'node' | 'unknown';
+  version: 'native' | 'polyfill';
+}
+```
+
+### Examples
+
+```typescript
+const info = atemporal.getTemporalInfo();
+console.log(info);
+/*
+{
+  isNative: false,
+  environment: 'node',
+  version: 'polyfill'
+}
+*/
+
+if (info.isNative) {
+  console.log('Using native Temporal API');
+} else {
+  console.log('Using polyfilled Temporal API');
+}
+```
+
+---
+
+## Related
+
+- [Factory Functions](/api/factory-functions) - Create Atemporal instances
+- [Manipulation Methods](/api/manipulation) - Modify dates
+- [Querying Methods](/api/querying) - Compare and query dates
+- [Plugins](/guides/plugins) - Extend functionality with plugins

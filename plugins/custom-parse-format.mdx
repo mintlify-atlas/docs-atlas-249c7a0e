@@ -1,0 +1,278 @@
+---
+title: "Custom Parse Format Plugin"
+description: "Parse date strings with custom format patterns like 'YYYY-MM-DD' or 'MM/DD/YYYY HH:mm'"
+---
+
+## Overview
+
+The Custom Parse Format plugin adds the ability to parse date strings using custom format patterns. This is similar to Day.js's `customParseFormat` plugin and supports a wide variety of format tokens.
+
+## Installation
+
+Load the plugin using either `extend` or `lazyLoad`:
+
+```javascript
+import atemporal from '@atemporal/core';
+import customParseFormatPlugin from '@atemporal/core/plugins/customParseFormat';
+
+// Option 1: Load immediately
+atemporal.extend(customParseFormatPlugin);
+
+// Option 2: Lazy load on first use
+atemporal.lazyLoad(customParseFormatPlugin);
+```
+
+## Methods
+
+### `atemporal.fromFormat(dateString, formatString, timeZone?)`
+
+Creates an Atemporal instance from a string and a specific format.
+
+**Signature:**
+```typescript
+atemporal.fromFormat(
+  dateString: string,
+  formatString: string,
+  timeZone?: string
+): TemporalWrapper
+```
+
+**Parameters:**
+- `dateString`: The date string to parse
+- `formatString`: The format that the date string follows (e.g., 'YYYY-MM-DD')
+- `timeZone` (optional): The timezone to apply. If not provided, uses the default
+
+**Returns:** A new `TemporalWrapper` instance
+
+**Examples:**
+```javascript
+atemporal.fromFormat('12-25-2023', 'MM-DD-YYYY');
+
+atemporal.fromFormat('2023/01/15 14:30', 'YYYY/MM/DD HH:mm');
+
+atemporal.fromFormat('15.03.2024', 'DD.MM.YYYY', 'Europe/Berlin');
+```
+
+## Format Tokens
+
+The plugin supports a comprehensive set of format tokens:
+
+### Year
+
+| Token | Description | Example |
+|-------|-------------|----------|
+| `YYYY` | 4-digit year | `2023` |
+| `YY` | 2-digit year | `23` (interpreted as 2023) |
+
+**2-digit year rules:**
+- Years `00-68` → `2000-2068`
+- Years `69-99` → `1969-1999`
+
+### Month
+
+| Token | Description | Example |
+|-------|-------------|----------|
+| `MM` | Month with leading zero | `01`, `12` |
+| `M` | Month without leading zero | `1`, `12` |
+| `MMMM` | Full month name | `January`, `December` |
+| `MMM` | Abbreviated month name | `Jan`, `Dec` |
+
+### Day
+
+| Token | Description | Example |
+|-------|-------------|----------|
+| `DD` | Day with leading zero | `01`, `31` |
+| `D` | Day without leading zero | `1`, `31` |
+| `DDD` | Day of year (3 digits) | `001`, `365` |
+| `DDDD` | Day of year (1-3 digits) | `1`, `365` |
+
+### Hour
+
+| Token | Description | Example |
+|-------|-------------|----------|
+| `HH` | Hour (24-hour, leading zero) | `00`, `23` |
+| `H` | Hour (24-hour, no leading zero) | `0`, `23` |
+| `hh` | Hour (12-hour, leading zero) | `01`, `12` |
+| `h` | Hour (12-hour, no leading zero) | `1`, `12` |
+
+### Minute
+
+| Token | Description | Example |
+|-------|-------------|----------|
+| `mm` | Minute with leading zero | `00`, `59` |
+| `m` | Minute without leading zero | `0`, `59` |
+
+### Second
+
+| Token | Description | Example |
+|-------|-------------|----------|
+| `ss` | Second with leading zero | `00`, `59` |
+| `s` | Second without leading zero | `0`, `59` |
+
+### Millisecond
+
+| Token | Description | Example |
+|-------|-------------|----------|
+| `SSS` | Milliseconds (3 digits) | `000`, `999` |
+| `SS` | Centiseconds (2 digits) | `00`, `99` |
+| `S` | Deciseconds (1 digit) | `0`, `9` |
+
+### AM/PM
+
+| Token | Description | Example |
+|-------|-------------|----------|
+| `A` | AM/PM uppercase | `AM`, `PM` |
+| `a` | am/pm lowercase | `am`, `pm` |
+
+**Note:** When using 12-hour format (`h` or `hh`), an AM/PM token is required.
+
+## Validation
+
+The plugin includes comprehensive validation:
+
+- **Range validation**: Ensures values are within valid ranges
+- **Date validation**: Uses Temporal API to validate dates (e.g., rejects February 30th)
+- **Leap year support**: Correctly handles leap years
+- **Month-specific days**: Validates day counts for each month
+- **12-hour format**: Requires AM/PM marker when using `h` or `hh`
+
+## Strict Mode
+
+The parsing is strict by default. The entire string must match the format pattern exactly:
+
+```javascript
+// This works
+atemporal.fromFormat('2023-12-25', 'YYYY-MM-DD');
+
+// This returns Invalid Date (extra characters)
+atemporal.fromFormat('2023-12-25 extra', 'YYYY-MM-DD');
+```
+
+## Flexible Whitespace
+
+The parser allows flexible whitespace matching. Single spaces in the format string will match any amount of whitespace:
+
+```javascript
+atemporal.fromFormat('2023-12-25  14:30', 'YYYY-MM-DD HH:mm');
+// Matches despite double space
+```
+
+## Literal Text
+
+You can include literal text in format strings using square brackets:
+
+```javascript
+atemporal.fromFormat('Year: 2023', '[Year:] YYYY');
+
+atemporal.fromFormat('Date 2023-12-25', '[Date] YYYY-MM-DD');
+```
+
+## Examples
+
+### Common Date Formats
+
+```javascript
+// ISO format
+atemporal.fromFormat('2023-12-25', 'YYYY-MM-DD');
+
+// US format
+atemporal.fromFormat('12/25/2023', 'MM/DD/YYYY');
+
+// European format
+atemporal.fromFormat('25.12.2023', 'DD.MM.YYYY');
+
+// With full month name
+atemporal.fromFormat('December 25, 2023', 'MMMM DD, YYYY');
+```
+
+### Time Formats
+
+```javascript
+// 24-hour format
+atemporal.fromFormat('14:30:00', 'HH:mm:ss');
+
+// 12-hour format with AM/PM
+atemporal.fromFormat('2:30 PM', 'h:mm A');
+atemporal.fromFormat('02:30:45 pm', 'hh:mm:ss a');
+
+// With milliseconds
+atemporal.fromFormat('14:30:00.500', 'HH:mm:ss.SSS');
+```
+
+### Combined Date and Time
+
+```javascript
+atemporal.fromFormat('2023-12-25 14:30', 'YYYY-MM-DD HH:mm');
+
+atemporal.fromFormat('12/25/2023 2:30 PM', 'MM/DD/YYYY h:mm A');
+
+atemporal.fromFormat('25.12.2023 14:30:00', 'DD.MM.YYYY HH:mm:ss');
+```
+
+### Day of Year
+
+```javascript
+// Parse 100th day of 2023
+atemporal.fromFormat('2023-100', 'YYYY-DDD');
+// Results in April 10, 2023
+
+atemporal.fromFormat('2024-366', 'YYYY-DDD');
+// Results in December 31, 2024 (leap year)
+```
+
+### With Timezone
+
+```javascript
+atemporal.fromFormat(
+  '2023-12-25 14:30',
+  'YYYY-MM-DD HH:mm',
+  'America/New_York'
+);
+
+atemporal.fromFormat(
+  '25/12/2023 9:00 AM',
+  'DD/MM/YYYY h:mm A',
+  'Europe/London'
+);
+```
+
+### Error Handling
+
+```javascript
+// Returns Invalid Date instance
+const invalid = atemporal.fromFormat('invalid-date', 'YYYY-MM-DD');
+invalid.isValid();  // false
+
+// Invalid day for month
+const feb30 = atemporal.fromFormat('2023-02-30', 'YYYY-MM-DD');
+feb30.isValid();  // false
+
+// Missing AM/PM with 12-hour format
+const noAmPm = atemporal.fromFormat('2:30', 'h:mm');
+noAmPm.isValid();  // false
+```
+
+## Performance
+
+The plugin includes an LRU cache (max 100 entries) that stores compiled regular expressions for format strings. This significantly improves performance when parsing multiple dates with the same format.
+
+### Cache Management
+
+```javascript
+// Clear the format cache
+atemporal.clearFormatCache();
+
+// Get cache size
+const size = atemporal.getFormatCacheSize();
+
+// Get cache statistics
+const stats = atemporal.getFormatCacheStats();
+```
+
+## Best Practices
+
+1. **Reuse format strings**: The cache makes repeated parsing with the same format very fast
+2. **Use strict formats**: Always match the exact format of your input strings
+3. **Validate results**: Check `.isValid()` after parsing untrusted input
+4. **Specify timezones**: Always provide a timezone when parsing times from specific locations
+5. **Prefer ISO format**: When possible, use ISO 8601 format strings for best compatibility

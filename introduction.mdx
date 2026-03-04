@@ -1,0 +1,151 @@
+---
+title: Introduction
+description: A modern, immutable, and ergonomic date-time library built on the Temporal API
+---
+
+Atemporal is a modern date-time library that provides a familiar, chainable API powered by the JavaScript Temporal API. It combines the ergonomics of Day.js with the power and correctness of Temporal, offering a smooth migration path for projects looking to modernize their date-time handling.
+
+## Why Atemporal?
+
+The Temporal API is the future of date-time handling in JavaScript, but its API can be verbose and unfamiliar to developers used to libraries like Day.js, Luxon, or Moment.js. Atemporal bridges this gap by providing:
+
+<CardGroup cols={2}>
+  <Card title="Immutable & Chainable" icon="link">
+    Fluid API inspired by Day.js that makes date manipulation intuitive and safe
+  </Card>
+  <Card title="Plugin-Powered" icon="puzzle-piece">
+    Lightweight core with an extensible plugin system - only load what you need
+  </Card>
+  <Card title="Time Zone Aware" icon="globe">
+    First-class support for IANA time zones built on Temporal's robust implementation
+  </Card>
+  <Card title="Type-Safe" icon="shield-check">
+    Built with TypeScript for excellent developer experience and compile-time safety
+  </Card>
+</CardGroup>
+
+## Key Features
+
+### Modern Foundation
+
+Atemporal is built on top of the [Temporal API](https://tc39.es/proposal-temporal/docs/), the upcoming standard for date-time handling in JavaScript. This means you get:
+
+- Correct arithmetic across time zones and daylight saving transitions
+- Native support for all calendar systems
+- Proper handling of edge cases that plague older libraries
+- Future-proof code that aligns with web standards
+
+### Familiar Developer Experience
+
+If you've used Day.js or Moment.js, you'll feel right at home:
+
+```javascript
+import atemporal from 'atemporal';
+
+const now = atemporal();
+const future = now.add(3, 'days').startOf('day');
+console.log(future.format('YYYY-MM-DD')); // "2026-03-07"
+```
+
+### Extensible Plugin System
+
+Atemporal's core is intentionally lightweight. Add functionality as needed through plugins:
+
+<AccordionGroup>
+  <Accordion title="relativeTime">
+    Add `.fromNow()` and `.toNow()` methods for human-readable relative times like "5 minutes ago"
+  </Accordion>
+  <Accordion title="customParseFormat">
+    Parse complex date strings with custom format patterns like "DD/MM/YYYY"
+  </Accordion>
+  <Accordion title="advancedFormat">
+    Extended formatting options including ordinals ("1st", "2nd") and quarter formatting
+  </Accordion>
+  <Accordion title="weekDay">
+    Enhanced weekday handling with configurable week start days
+  </Accordion>
+  <Accordion title="durationHumanizer">
+    Convert durations into human-readable strings like "2 years, 3 months"
+  </Accordion>
+  <Accordion title="businessDays">
+    Working day calculations with holiday support for business applications
+  </Accordion>
+  <Accordion title="timeSlots">
+    Find available time slots in schedules for booking systems
+  </Accordion>
+  <Accordion title="dateRangeOverlap">
+    Detect and calculate intersections between date ranges
+  </Accordion>
+</AccordionGroup>
+
+### Localization Built-In
+
+Atemporal leverages the native `Intl` API for formatting, giving you built-in support for any locale:
+
+```javascript
+atemporal.setDefaultLocale('fr-FR');
+const date = atemporal('2024-07-26');
+console.log(date.format({ dateStyle: 'long' }));
+// "26 juillet 2024"
+```
+
+## Comparison to Other Libraries
+
+<Tabs>
+  <Tab title="vs Day.js">
+    **Similarities:**
+    - Nearly identical chainable API
+    - Plugin architecture
+    - Small bundle size philosophy
+    
+    **Advantages of Atemporal:**
+    - Built on Temporal API for correctness
+    - Proper time zone support
+    - Handles calendar edge cases correctly
+    - Future-proof with web standards
+  </Tab>
+  <Tab title="vs Luxon">
+    **Similarities:**
+    - Built for correctness and time zone awareness
+    - Immutable operations
+    - TypeScript support
+    
+    **Advantages of Atemporal:**
+    - More familiar Day.js-like API
+    - Lighter weight core
+    - Plugin system for optional features
+    - Built on the upcoming standard
+  </Tab>
+  <Tab title="vs Moment.js">
+    **Why choose Atemporal:**
+    - Moment.js is in maintenance mode
+    - Atemporal is immutable by default
+    - Smaller bundle size
+    - Modern API design
+    - Proper time zone support without moment-timezone
+    - No legacy baggage
+  </Tab>
+</Tabs>
+
+## When to Use Atemporal
+
+<Check>New projects that need modern date-time handling</Check>
+<Check>Applications requiring robust time zone support</Check>
+<Check>Projects migrating from Day.js or Moment.js</Check>
+<Check>TypeScript projects that want type safety</Check>
+<Check>Apps that need internationalization</Check>
+
+<Warning>
+  Atemporal requires Node.js 18+ and uses the Temporal polyfill in environments without native support. The polyfill adds ~50KB to your bundle. Native Temporal support is coming to browsers in 2026.
+</Warning>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Get Atemporal installed in your project
+  </Card>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Build your first date-time feature in minutes
+  </Card>
+</CardGroup>

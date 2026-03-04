@@ -1,0 +1,355 @@
+---
+title: 'Formatting API'
+description: 'Methods for formatting and converting date-time values to strings'
+---
+
+# Formatting API
+
+Methods for converting Atemporal instances to various string formats and other representations.
+
+## .format()
+
+Formats the date using token strings or native Intl.DateTimeFormat options.
+
+```typescript
+format(formatString: string, localeCode?: string): string
+format(options?: Intl.DateTimeFormatOptions, localeCode?: string): string
+```
+
+<ParamField path="formatString" type="string">
+  Day.js-style token string (e.g., 'YYYY-MM-DD HH:mm:ss')
+</ParamField>
+
+<ParamField path="options" type="Intl.DateTimeFormatOptions">
+  Native Intl.DateTimeFormat options for advanced localization
+</ParamField>
+
+<ParamField path="localeCode" type="string" optional>
+  Optional IANA locale string (e.g., 'es-CR', 'en-US'). Defaults to the default locale.
+</ParamField>
+
+<ResponseField name="return" type="string">
+  The formatted date string
+</ResponseField>
+
+### Format Tokens
+
+| Token  | Output Example        | Description                                  |
+|--------|-----------------------|----------------------------------------------|
+| `YYYY` | `2024`                | 4-digit year                                 |
+| `YY`   | `24`                  | 2-digit year                                 |
+| `MMMM` | `January`             | Full month name                              |
+| `MMM`  | `Jan`                 | Abbreviated month name                       |
+| `MM`   | `01`                  | Month, 2-digits (01-12)                      |
+| `M`    | `1`                   | Month (1-12)                                 |
+| `DD`   | `09`                  | Day of month, 2-digits (01-31)               |
+| `D`    | `9`                   | Day of month (1-31)                          |
+| `dddd` | `Sunday`              | Full day name                                |
+| `ddd`  | `Sun`                 | Short day name                               |
+| `dd`   | `Su`                  | Min day name                                 |
+| `d`    | `0`                   | Day of week, Sunday as 0 (0-6)               |
+| `HH`   | `15`                  | Hour, 2-digits (00-23)                       |
+| `H`    | `15`                  | Hour (0-23)                                  |
+| `hh`   | `03`                  | Hour, 12-hour clock, 2-digits (01-12)        |
+| `h`    | `3`                   | Hour, 12-hour clock (1-12)                   |
+| `mm`   | `05`                  | Minute, 2-digits (00-59)                     |
+| `m`    | `5`                   | Minute (0-59)                                |
+| `ss`   | `02`                  | Second, 2-digits (00-59)                     |
+| `s`    | `2`                   | Second (0-59)                                |
+| `SSS`  | `123`                 | Millisecond, 3-digits (000-999)              |
+| `A`    | `PM`                  | AM PM (uppercase)                            |
+| `a`    | `pm`                  | am pm (lowercase)                            |
+| `Z`    | `+05:30`              | UTC offset, ±HH:mm                           |
+| `ZZ`   | `+0530`               | UTC offset, ±HHmm                            |
+| `z`    | `America/New_York`    | IANA time zone name                          |
+| `zzz`  | `EST`                 | Short localized time zone name               |
+| `zzzz` | `Eastern Standard Time` | Long localized time zone name              |
+
+### Token-Based Formatting Examples
+
+```typescript
+const date = atemporal('2024-07-16T15:30:15.123Z');
+
+// Basic formats
+date.format('YYYY-MM-DD');                    // '2024-07-16'
+date.format('MM/DD/YYYY');                    // '07/16/2024'
+date.format('MMMM D, YYYY');                  // 'July 16, 2024'
+date.format('dddd, MMMM D, YYYY');            // 'Tuesday, July 16, 2024'
+
+// Time formats
+date.format('HH:mm:ss');                      // '15:30:15'
+date.format('hh:mm:ss A');                    // '03:30:15 PM'
+date.format('h:mm A');                        // '3:30 PM'
+
+// Combined formats
+date.format('YYYY-MM-DD HH:mm:ss');           // '2024-07-16 15:30:15'
+date.format('MMM D, YYYY [at] h:mm A');       // 'Jul 16, 2024 at 3:30 PM'
+date.format('ddd, MMM D, YYYY - h:mm:ss A');  // 'Tue, Jul 16, 2024 - 3:30:15 PM'
+
+// With milliseconds
+date.format('HH:mm:ss.SSS');                  // '15:30:15.123'
+
+// With timezone
+date.format('YYYY-MM-DD HH:mm:ss Z');         // '2024-07-16 15:30:15 +00:00'
+date.format('YYYY-MM-DD HH:mm:ss z');         // '2024-07-16 15:30:15 UTC'
+
+// With locale
+date.format('MMMM D, YYYY', 'es');            // 'julio 16, 2024'
+date.format('dddd, MMMM D, YYYY', 'fr');      // 'mardi, juillet 16, 2024'
+```
+
+### Intl.DateTimeFormat Examples
+
+```typescript
+const date = atemporal('2024-07-16T15:30:15Z');
+
+// Using Intl options for advanced localization
+date.format({ 
+  dateStyle: 'full', 
+  timeStyle: 'medium' 
+}, 'es');
+// => 'martes, 16 de julio de 2024, 15:30:15'
+
+date.format({ 
+  weekday: 'long',
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric'
+}, 'en-US');
+// => 'Tuesday, July 16, 2024'
+
+date.format({
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hour12: true
+});
+// => '03:30:15 PM'
+
+date.format({
+  dateStyle: 'short'
+}, 'en-GB');
+// => '16/07/2024'
+```
+
+<Note>
+  The formatting system uses an optimized engine with caching and token pooling for high performance.
+</Note>
+
+---
+
+## .toString()
+
+Returns the canonical ISO 8601 string representation of the date-time.
+
+```typescript
+toString(): string
+```
+
+<ResponseField name="return" type="string">
+  The formatted ISO 8601 string
+</ResponseField>
+
+### Examples
+
+```typescript
+const date1 = atemporal('2024-01-15T10:30:45.500Z');
+date1.toString();
+// => '2024-01-15T10:30:45.500Z'
+
+const date2 = atemporal('2024-01-15T10:30:00.000Z');
+date2.toString();
+// => '2024-01-15T10:30:00Z' (no fractional seconds when zero)
+
+const date3 = atemporal('2024-01-15T10:30:45-05:00');
+date3.toString();
+// => '2024-01-15T10:30:45-05:00'
+
+const invalid = atemporal('invalid');
+invalid.toString();
+// => 'Invalid Date'
+```
+
+<Note>
+  Uses 'Z' for UTC and includes milliseconds only when non-zero.
+</Note>
+
+---
+
+## .toJSON()
+
+Alias for `.toString()`. Useful for JSON serialization.
+
+```typescript
+toJSON(): string
+```
+
+<ResponseField name="return" type="string">
+  The formatted ISO 8601 string
+</ResponseField>
+
+### Examples
+
+```typescript
+const date = atemporal('2024-01-15T10:30:45Z');
+
+const obj = {
+  name: 'Event',
+  timestamp: date
+};
+
+JSON.stringify(obj);
+// => '{"name":"Event","timestamp":"2024-01-15T10:30:45Z"}'
+```
+
+---
+
+## .toDate()
+
+Converts the Atemporal instance to a legacy JavaScript Date object.
+
+```typescript
+toDate(): Date
+```
+
+<ResponseField name="return" type="Date">
+  A JavaScript Date object, or an invalid Date if the instance is invalid
+</ResponseField>
+
+### Examples
+
+```typescript
+const atDate = atemporal('2024-01-15T10:30:45Z');
+const jsDate = atDate.toDate();
+
+console.log(jsDate instanceof Date); // true
+console.log(jsDate.toISOString());   // '2024-01-15T10:30:45.000Z'
+
+// Use with libraries that expect Date objects
+const chart = new Chart({
+  data: [
+    { x: atemporal('2024-01-01').toDate(), y: 100 },
+    { x: atemporal('2024-01-02').toDate(), y: 150 }
+  ]
+});
+
+// Invalid dates
+const invalid = atemporal('invalid');
+const invalidDate = invalid.toDate();
+console.log(isNaN(invalidDate.getTime())); // true
+```
+
+<Warning>
+  JavaScript Date objects lose timezone information. Only use when interoperability requires it.
+</Warning>
+
+---
+
+## .raw / .datetime
+
+Provides direct access to the underlying `Temporal.ZonedDateTime` object.
+
+```typescript
+get datetime(): Temporal.ZonedDateTime
+get raw(): Temporal.ZonedDateTime
+```
+
+<ResponseField name="return" type="Temporal.ZonedDateTime">
+  The underlying Temporal.ZonedDateTime object
+</ResponseField>
+
+### Examples
+
+```typescript
+const date = atemporal('2024-01-15T10:30:00Z');
+
+// Access the raw Temporal object
+const temporal = date.raw;
+const datetime = date.datetime; // Same as .raw
+
+// Use native Temporal methods
+console.log(temporal.epochMilliseconds); // 1705318200000
+console.log(temporal.epochNanoseconds);  // 1705318200000000000n
+console.log(temporal.offset);            // '+00:00'
+
+// Convert to other Temporal types
+const plainDate = temporal.toPlainDate();
+const plainTime = temporal.toPlainTime();
+const instant = temporal.toInstant();
+```
+
+<Warning>
+  Throws `InvalidAtemporalInstanceError` if the instance is invalid.
+</Warning>
+
+---
+
+## Locale Support
+
+Set a default locale for all formatting operations.
+
+```typescript
+import atemporal from 'atemporal';
+
+// Set default locale
+atemporal.setDefaultLocale('es-MX');
+
+const date = atemporal('2024-01-15');
+date.format('MMMM D, YYYY'); // 'enero 15, 2024'
+
+// Override for specific format
+date.format('MMMM D, YYYY', 'fr-FR'); // 'janvier 15, 2024'
+
+// Get current default locale
+const locale = atemporal.getDefaultLocale(); // 'es-MX'
+```
+
+---
+
+## Performance Metrics
+
+Atemporal provides formatting performance insights.
+
+### Static Methods
+
+```typescript
+// Get formatting metrics
+const metrics = atemporal.Atemporal.getFormattingMetrics();
+console.log(metrics);
+/*
+{
+  totalFormats: 1543,
+  averageFormatTime: 0.234,
+  cacheHits: 1320,
+  fastPathHits: 1105,
+  tokenPoolStats: { ... },
+  compilationStats: { ... }
+}
+*/
+
+// Get performance report
+const report = atemporal.Atemporal.getFormattingPerformanceReport();
+console.log(report);
+/*
+Formatting Performance Report:
+Total Formats: 1543
+Average Format Time: 0.234ms
+Cache Hit Ratio: 85.55%
+Fast Path Hit Ratio: 71.61%
+...
+*/
+
+// Reset formatting system
+atemporal.Atemporal.resetFormattingSystem();
+
+// Pre-warm with common patterns
+atemporal.Atemporal.prewarmFormattingSystem();
+```
+
+---
+
+## Related
+
+- [Manipulation Methods](/api/manipulation) - Modify dates
+- [Querying Methods](/api/querying) - Compare and query dates
+- [Utilities](/api/utilities) - Static utility functions

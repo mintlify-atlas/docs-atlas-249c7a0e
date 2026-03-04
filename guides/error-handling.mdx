@@ -1,0 +1,664 @@
+---
+title: "Error Handling"
+description: "Understanding Atemporal's error types, validation patterns, and debugging strategies"
+---
+
+# Error Handling
+
+Atemporal provides a robust error handling system with specific error types to help you identify and fix issues quickly.
+
+## Error Types
+
+Atemporal defines several custom error classes that extend from a base `AtemporalError` class:
+
+```typescript src/errors.ts
+class AtemporalError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = this.constructor.name;
+  }
+}
+```
+
+### InvalidDateError
+
+Thrown when an input cannot be parsed into a valid date.
+
+```typescript
+import atemporal from 'atemporal';
+import { InvalidDateError } from 'atemporal';
+
+try {
+  // This will create an invalid instance, not throw
+  const invalid = atemporal('not a date');
+  
+  // But you can check validity
+  if (!invalid.isValid()) {
+    console.log('Invalid date detected');
+  }
+} catch (error) {
+  if (error instanceof InvalidDateError) {
+    console.error('Failed to parse date:', error.message);
+  }
+}
+```
+
+<Note>
+  Most Atemporal operations handle invalid dates gracefully by returning invalid instances rather than throwing errors. The `InvalidDateError` is thrown in specific cases like `atemporal.min()` and `atemporal.max()` when invalid dates are provided.
+</Note>
+
+### InvalidTimeZoneError
+
+Thrown when an invalid IANA time zone identifier is used.
+
+```typescript
+import atemporal from 'atemporal';
+import { InvalidTimeZoneError } from 'atemporal';
+
+try {
+  // Invalid timezone
+  const date = atemporal('2024-03-15', 'Invalid/Timezone');
+} catch (error) {
+  if (error instanceof InvalidTimeZoneError) {
+    console.error('Invalid timezone:', error.message);
+  }
+}
+```
+
+**Prevention:**
+
+```typescript
+// Validate timezone before using it
+const tz = 'America/New_York';
+
+if (atemporal.isValidTimeZone(tz)) {
+  const date = atemporal(undefined, tz);
+} else {
+  console.error(`Invalid timezone: ${tz}`);
+}
+```
+
+### InvalidAtemporalInstanceError
+
+Thrown when an operation is attempted on an invalid atemporal instance in contexts where throwing is more appropriate than returning invalid.
+
+```typescript
+import { InvalidAtemporalInstanceError } from 'atemporal';
+
+// This error is used internally and rarely thrown to users
+// Most operations return invalid instances instead
+```
+
+### InvalidFormatError
+
+Thrown when a format string contains invalid or unsupported tokens (requires `customParseFormat` plugin).
+
+```typescript
+import atemporal from 'atemporal';
+import customParseFormat from 'atemporal/plugins/customParseFormat';
+import { InvalidFormatError } from 'atemporal';
+
+atemporal.extend(customParseFormat);
+
+try {
+  // Using an unsupported token
+  const date = atemporal.fromFormat('2024-03-15', 'YYYY-XX-DD');
+} catch (error) {
+  if (error instanceof InvalidFormatError) {
+    console.error('Invalid format string:', error.message);
+    console.error('Format string:', error.formatString);
+    console.error('Invalid tokens:', error.invalidTokens);
+  }
+}
+```
+
+**Available Properties:**
+- `message`: Error description
+- `formatString`: The format string that failed
+- `invalidTokens`: Array of unsupported tokens found
+
+### FormatMismatchError
+
+Thrown when a date string doesn't match the provided format pattern.
+
+```typescript
+import atemporal from 'atemporal';
+import customParseFormat from 'atemporal/plugins/customParseFormat';
+import { FormatMismatchError } from 'atemporal';
+
+atemporal.extend(customParseFormat);
+
+try {
+  // Date string doesn't match format
+  const date = atemporal.fromFormat('15-03-2024', 'YYYY-MM-DD');
+} catch (error) {
+  if (error instanceof FormatMismatchError) {
+    console.error('Format mismatch:', error.message);
+    console.error('Date string:', error.dateString);
+    console.error('Expected format:', error.formatString);
+    console.error('Expected pattern:', error.expectedPattern);
+  }
+}
+```
+
+**Available Properties:**
+- `message`: Error description
+- `dateString`: The input string that failed to parse
+- `formatString`: The format pattern that was expected
+- `expectedPattern`: Regular expression pattern (if available)
+
+### InvalidDateComponentsError
+
+Thrown when parsed date components result in an invalid date.
+
+```typescript
+import { InvalidDateComponentsError } from 'atemporal';
+
+try {
+  // February 30th doesn't exist
+  const date = atemporal.fromFormat('2024-02-30', 'YYYY-MM-DD');
+} catch (error) {
+  if (error instanceof InvalidDateComponentsError) {
+    console.error('Invalid date components:', error.message);
+    console.error('Components:', error.components);
+    console.error('Reason:', error.reason);
+  }
+}
+```
+
+**Available Properties:**
+- `message`: Error description
+- `components`: Object containing the parsed date components
+- `reason`: Explanation of why the components are invalid
+
+### InvalidAmPmError
+
+Thrown when AM/PM parsing fails or is inconsistent.
+
+```typescript
+import { InvalidAmPmError } from 'atemporal';
+
+try {
+  // 13 o'clock with AM is invalid
+  const date = atemporal.fromFormat('13:00 AM', 'HH:mm A');
+} catch (error) {
+  if (error instanceof InvalidAmPmError) {
+    console.error('Invalid AM/PM:', error.message);
+    console.error('Hour (12-hour format):', error.hour12);
+    console.error('AM/PM indicator:', error.ampm);
+  }
+}
+```
+
+**Available Properties:**
+- `message`: Error description
+- `hour12`: The hour value in 12-hour format
+- `ampm`: The AM/PM indicator that was parsed
+
+## Invalid Date Handling
+
+Unlike other date libraries that throw errors, Atemporal uses the **Invalid Date pattern** for graceful degradation.
+
+### How It Works
+
+```typescript
+import atemporal from 'atemporal';
+
+// Creating an invalid date doesn't throw
+const invalid = atemporal('not a real date');
+
+// Check validity
+console.log(invalid.isValid()); // false
+
+// Operations on invalid dates return the same invalid instance
+const stillInvalid = invalid.add(5, 'day');
+console.log(stillInvalid.isValid()); // false
+
+// Formatting returns 'Invalid Date'
+console.log(invalid.format('YYYY-MM-DD')); // 'Invalid Date'
+
+// Plugins also handle invalid dates gracefully
+import relativeTime from 'atemporal/plugins/relativeTime';
+atemporal.extend(relativeTime);
+
+console.log(invalid.fromNow()); // 'Invalid Date'
+```
+
+### Validation Patterns
+
+<Tabs>
+  <Tab title="Basic Validation">
+    ```typescript
+    function processDate(input: string) {
+      const date = atemporal(input);
+      
+      if (!date.isValid()) {
+        console.error('Invalid date input:', input);
+        return null;
+      }
+      
+      return date.format('YYYY-MM-DD');
+    }
+
+    processDate('2024-03-15'); // '2024-03-15'
+    processDate('invalid');     // null (with error logged)
+    ```
+  </Tab>
+
+  <Tab title="With Default Fallback">
+    ```typescript
+    function getDateOrDefault(input: string, fallback = atemporal()) {
+      const date = atemporal(input);
+      return date.isValid() ? date : fallback;
+    }
+
+    // Use current date if input is invalid
+    const date = getDateOrDefault('maybe invalid');
+    ```
+  </Tab>
+
+  <Tab title="Array Validation">
+    ```typescript
+    function filterValidDates(inputs: string[]) {
+      return inputs
+        .map(input => atemporal(input))
+        .filter(date => date.isValid());
+    }
+
+    const dates = filterValidDates([
+      '2024-03-15',
+      'invalid',
+      '2024-03-16',
+      'also invalid'
+    ]);
+    // Returns array with 2 valid dates
+    ```
+  </Tab>
+
+  <Tab title="TypeScript Type Guard">
+    ```typescript
+    import { TemporalWrapper } from 'atemporal';
+
+    function isValidDate(
+      date: TemporalWrapper
+    ): date is TemporalWrapper {
+      return date.isValid();
+    }
+
+    const date = atemporal('2024-03-15');
+    
+    if (isValidDate(date)) {
+      // TypeScript knows date is valid here
+      console.log(date.format('YYYY-MM-DD'));
+    }
+    ```
+  </Tab>
+</Tabs>
+
+## Input Validation
+
+### Pre-Validation with Type Guards
+
+Atemporal provides several type guards for validation:
+
+```typescript
+import atemporal from 'atemporal';
+
+// Check if input is valid before parsing
+if (atemporal.isValid('2024-03-15')) {
+  const date = atemporal('2024-03-15');
+}
+
+// Check if something is already an atemporal instance
+function processDate(input: unknown) {
+  if (atemporal.isAtemporal(input)) {
+    // input is TemporalWrapper
+    return input.format('YYYY-MM-DD');
+  }
+  
+  return atemporal(input as any).format('YYYY-MM-DD');
+}
+
+// Check if something is a duration
+const duration = atemporal.duration({ days: 5 });
+if (atemporal.isDuration(duration)) {
+  console.log('This is a Temporal.Duration');
+}
+
+// Validate timezone
+const tz = 'America/New_York';
+if (atemporal.isValidTimeZone(tz)) {
+  const date = atemporal(undefined, tz);
+}
+
+// Validate locale
+if (atemporal.isValidLocale('en-US')) {
+  atemporal.setDefaultLocale('en-US');
+}
+```
+
+### Plugin Validation
+
+```typescript
+import atemporal from 'atemporal';
+import type { Plugin } from 'atemporal';
+
+const myPlugin: Plugin = (Atemporal, factory) => {
+  // Plugin implementation
+};
+
+// Validate plugin before extending
+if (atemporal.isPlugin(myPlugin)) {
+  atemporal.extend(myPlugin);
+}
+```
+
+## Common Error Scenarios
+
+### Scenario 1: User Input Validation
+
+```typescript
+function createEventDate(userInput: string) {
+  const date = atemporal(userInput);
+  
+  if (!date.isValid()) {
+    throw new Error(`Invalid date format: "${userInput}". Please use YYYY-MM-DD`);
+  }
+  
+  // Ensure date is in the future
+  if (!date.isAfter(atemporal())) {
+    throw new Error('Event date must be in the future');
+  }
+  
+  return date;
+}
+
+try {
+  const eventDate = createEventDate('2024-03-15');
+  console.log('Event scheduled for:', eventDate.format('MMMM Do, YYYY'));
+} catch (error) {
+  console.error('Failed to create event:', error.message);
+}
+```
+
+### Scenario 2: Timezone Validation with Fallback
+
+```typescript
+function getUserDateTime(dateStr: string, userTimezone?: string) {
+  // Validate and use user timezone, or fall back to UTC
+  const timezone = userTimezone && atemporal.isValidTimeZone(userTimezone)
+    ? userTimezone
+    : 'UTC';
+  
+  const date = atemporal(dateStr, timezone);
+  
+  if (!date.isValid()) {
+    throw new Error(`Invalid date: ${dateStr}`);
+  }
+  
+  return date;
+}
+
+// Safe to call with any timezone input
+const date1 = getUserDateTime('2024-03-15', 'America/New_York');
+const date2 = getUserDateTime('2024-03-15', 'Invalid/Zone'); // Uses UTC
+```
+
+### Scenario 3: Parsing External Data
+
+```typescript
+import atemporal from 'atemporal';
+import customParseFormat from 'atemporal/plugins/customParseFormat';
+
+atemporal.extend(customParseFormat);
+
+interface APIResponse {
+  createdAt: string;
+  timezone?: string;
+}
+
+function parseAPIDate(response: APIResponse) {
+  try {
+    // Try to parse with custom format
+    const date = atemporal.fromFormat(
+      response.createdAt,
+      'DD/MM/YYYY HH:mm:ss',
+      response.timezone
+    );
+    
+    if (!date.isValid()) {
+      // Fallback to ISO parsing
+      return atemporal(response.createdAt);
+    }
+    
+    return date;
+  } catch (error) {
+    console.error('Failed to parse API date:', error);
+    // Return current date as ultimate fallback
+    return atemporal();
+  }
+}
+```
+
+### Scenario 4: Min/Max with Error Handling
+
+```typescript
+import atemporal from 'atemporal';
+import { InvalidDateError } from 'atemporal';
+
+function findEarliestDate(dates: string[]) {
+  try {
+    // Convert strings to atemporal instances
+    const atemporalDates = dates.map(d => atemporal(d));
+    
+    // This will throw if any date is invalid
+    return atemporal.min(atemporalDates);
+  } catch (error) {
+    if (error instanceof InvalidDateError) {
+      console.error('One or more dates are invalid');
+      
+      // Filter out invalid dates and retry
+      const validDates = dates
+        .map(d => atemporal(d))
+        .filter(d => d.isValid());
+      
+      if (validDates.length === 0) {
+        throw new Error('No valid dates provided');
+      }
+      
+      return atemporal.min(validDates);
+    }
+    throw error;
+  }
+}
+```
+
+## Debugging Tips
+
+### Enable Verbose Logging
+
+```typescript
+// Check if a date is valid and why
+const date = atemporal('maybe-invalid');
+
+if (!date.isValid()) {
+  console.log('Invalid date detected');
+  console.log('Input was:', 'maybe-invalid');
+  
+  // Try to understand why by testing variations
+  console.log('ISO format works?', atemporal('2024-03-15').isValid());
+  console.log('Timestamp works?', atemporal(Date.now()).isValid());
+}
+```
+
+### Inspect Internal State
+
+```typescript
+import { TemporalWrapper } from 'atemporal';
+
+const date = atemporal('2024-03-15T10:30:00', 'America/New_York');
+
+// Access the underlying ZonedDateTime (for debugging only)
+const internal = (date as any)._datetime;
+console.log('Internal representation:', internal?.toString());
+
+// Check validity flag
+console.log('Is valid?', (date as any)._isValid);
+```
+
+<Warning>
+  Internal properties (prefixed with `_`) are private and should only be accessed for debugging. Never rely on them in production code.
+</Warning>
+
+### Performance Debugging
+
+```typescript
+import { TemporalWrapper } from 'atemporal';
+
+// Get formatting metrics
+const metrics = TemporalWrapper.getFormattingMetrics();
+console.log('Formatting performance:', metrics);
+// {
+//   totalFormats: 1250,
+//   cacheHits: 980,
+//   cacheMisses: 270,
+//   hitRate: 0.784,
+//   averageTimeMs: 0.42
+// }
+
+// Get detailed report
+const report = TemporalWrapper.getFormattingReport();
+console.log(report);
+```
+
+### Test with Known Values
+
+```typescript
+// Create a test suite for your date handling
+const testCases = [
+  { input: '2024-03-15', expected: true },
+  { input: 'invalid', expected: false },
+  { input: 1710504000000, expected: true },
+  { input: new Date(), expected: true },
+  { input: null, expected: false },
+];
+
+testCases.forEach(({ input, expected }) => {
+  const date = atemporal(input as any);
+  const isValid = date.isValid();
+  
+  if (isValid !== expected) {
+    console.error(`Test failed for input: ${input}`);
+    console.error(`Expected: ${expected}, Got: ${isValid}`);
+  }
+});
+```
+
+## Best Practices
+
+<CardGroup cols={2}>
+  <Card title="Always Validate User Input" icon="shield-check">
+    Never trust external input. Always use `.isValid()` or type guards before processing dates.
+  </Card>
+  
+  <Card title="Provide Meaningful Errors" icon="message-exclamation">
+    When throwing errors, include context about what went wrong and how to fix it.
+  </Card>
+  
+  <Card title="Use Try-Catch for Plugins" icon="hand-paper">
+    Plugin methods like `fromFormat()` may throw specific errors. Catch them appropriately.
+  </Card>
+  
+  <Card title="Graceful Degradation" icon="heart">
+    Use fallback values when appropriate instead of crashing the application.
+  </Card>
+  
+  <Card title="Log for Debugging" icon="file-magnifying-glass">
+    Log validation failures in development to understand patterns in invalid data.
+  </Card>
+  
+  <Card title="Test Edge Cases" icon="flask">
+    Test with invalid dates, timezone edge cases, and boundary values.
+  </Card>
+</CardGroup>
+
+## Error Recovery Patterns
+
+### Pattern 1: Fallback Chain
+
+```typescript
+function parseFlexibleDate(input: string): TemporalWrapper {
+  // Try ISO format first
+  let date = atemporal(input);
+  if (date.isValid()) return date;
+  
+  // Try common formats
+  const formats = ['DD/MM/YYYY', 'MM/DD/YYYY', 'YYYY-MM-DD'];
+  
+  for (const format of formats) {
+    try {
+      date = atemporal.fromFormat(input, format);
+      if (date.isValid()) return date;
+    } catch {
+      continue;
+    }
+  }
+  
+  // Last resort: return current date
+  console.warn(`Could not parse date: ${input}, using current date`);
+  return atemporal();
+}
+```
+
+### Pattern 2: Validation Wrapper
+
+```typescript
+class ValidatedDate {
+  private date: TemporalWrapper;
+  private errors: string[] = [];
+  
+  constructor(input: any) {
+    this.date = atemporal(input);
+    
+    if (!this.date.isValid()) {
+      this.errors.push('Invalid date format');
+    }
+  }
+  
+  isValid(): boolean {
+    return this.errors.length === 0;
+  }
+  
+  getErrors(): string[] {
+    return [...this.errors];
+  }
+  
+  getValue(): TemporalWrapper {
+    if (!this.isValid()) {
+      throw new Error(`Cannot get value: ${this.errors.join(', ')}`);
+    }
+    return this.date;
+  }
+}
+
+const validated = new ValidatedDate('2024-03-15');
+if (validated.isValid()) {
+  const date = validated.getValue();
+} else {
+  console.error('Validation errors:', validated.getErrors());
+}
+```
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card title="Migration Guide" icon="arrows-turn-right" href="/guides/migration">
+    Learn how to migrate from other date libraries
+  </Card>
+  <Card title="Advanced Patterns" icon="wand-magic-sparkles" href="/guides/advanced-patterns">
+    Explore performance optimization and plugin development
+  </Card>
+  <Card title="API Reference" icon="book" href="/api/factory-functions">
+    Complete API documentation
+  </Card>
+</CardGroup>
