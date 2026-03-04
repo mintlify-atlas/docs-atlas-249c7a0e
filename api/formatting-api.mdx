@@ -313,8 +313,10 @@ Atemporal provides formatting performance insights.
 ### Static Methods
 
 ```typescript
+import { Atemporal } from 'atemporal';
+
 // Get formatting metrics
-const metrics = atemporal.Atemporal.getFormattingMetrics();
+const metrics = Atemporal.getFormattingMetrics();
 console.log(metrics);
 /*
 {
@@ -328,7 +330,7 @@ console.log(metrics);
 */
 
 // Get performance report
-const report = atemporal.Atemporal.getFormattingPerformanceReport();
+const report = Atemporal.getFormattingPerformanceReport();
 console.log(report);
 /*
 Formatting Performance Report:
@@ -340,10 +342,10 @@ Fast Path Hit Ratio: 71.61%
 */
 
 // Reset formatting system
-atemporal.Atemporal.resetFormattingSystem();
+Atemporal.resetFormattingSystem();
 
 // Pre-warm with common patterns
-atemporal.Atemporal.prewarmFormattingSystem();
+Atemporal.prewarmFormattingSystem();
 ```
 
 ---

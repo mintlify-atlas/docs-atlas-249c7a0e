@@ -501,6 +501,70 @@ console.log(`Days in month: ${date.daysInMonth}`);
 
 ---
 
+## .range()
+
+Generates an array of dates within a given date range. Can return either Atemporal instances or formatted strings.
+
+```typescript
+range(endDate: DateInput, unit: TimeUnit, options?: { inclusivity?: '()' | '[]' | '(]' | '[)' }): TemporalWrapper[]
+range(endDate: DateInput, unit: TimeUnit, options: { inclusivity?: '()' | '[]' | '(]' | '[)', format: string | Intl.DateTimeFormatOptions }): string[]
+```
+
+<ParamField path="endDate" type="DateInput" required>
+  The end date of the range
+</ParamField>
+
+<ParamField path="unit" type="TimeUnit" required>
+  The unit to increment by: 'year', 'month', 'week', 'day', 'hour', 'minute', 'second', or 'millisecond'
+</ParamField>
+
+<ParamField path="options.inclusivity" type="string" optional>
+  Controls whether start and end dates are included:
+  - `'[]'` - Both inclusive (default)
+  - `'()'` - Both exclusive
+  - `'[)'` - Start inclusive, end exclusive
+  - `'(]'` - Start exclusive, end inclusive
+</ParamField>
+
+<ParamField path="options.format" type="string | Intl.DateTimeFormatOptions" optional>
+  If provided, returns an array of formatted strings instead of Atemporal instances. Can be a format string (e.g., 'YYYY-MM-DD') or Intl options
+</ParamField>
+
+<ResponseField name="return" type="TemporalWrapper[] | string[]">
+  Array of Atemporal instances or formatted strings covering the range
+</ResponseField>
+
+### Examples
+
+```typescript
+const start = atemporal('2023-01-01');
+const end = atemporal('2023-01-05');
+
+// Array of Atemporal instances
+const days = start.range(end, 'day');
+// [Atemporal('2023-01-01'), Atemporal('2023-01-02'), ..., Atemporal('2023-01-05')]
+
+// Array of formatted strings
+const formatted = start.range(end, 'day', { format: 'YYYY-MM-DD' });
+// ['2023-01-01', '2023-01-02', '2023-01-03', '2023-01-04', '2023-01-05']
+
+// Exclusive range
+const exclusive = start.range(end, 'day', { inclusivity: '()' });
+// Excludes both start and end dates
+
+// Weekly range
+const weeks = start.range(atemporal('2023-02-01'), 'week', { format: 'MMM DD' });
+// ['Jan 01', 'Jan 08', 'Jan 15', 'Jan 22', 'Jan 29']
+
+// Using Intl options for formatting
+const intl = start.range(end, 'day', { 
+  format: { month: 'long', day: 'numeric' } 
+});
+// ['January 1', 'January 2', 'January 3', 'January 4', 'January 5']
+```
+
+---
+
 ## Related
 
 - [Manipulation Methods](/api/manipulation) - Modify dates

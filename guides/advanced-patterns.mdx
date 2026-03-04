@@ -63,21 +63,21 @@ Atemporal uses multiple specialized caches:
 ### Performance Monitoring
 
 ```typescript
-import { TemporalWrapper } from 'atemporal';
+import { Atemporal } from 'atemporal';
 
 // Get formatting performance metrics
-const metrics = TemporalWrapper.getFormattingMetrics();
+const metrics = Atemporal.getFormattingMetrics();
 console.log(metrics);
 // {
 //   totalFormats: 1250,
 //   cacheHits: 980,
-//   cacheMisses: 270,
-//   hitRate: 0.784,
-//   averageTimeMs: 0.42
+//   averageFormatTime: 0.42,
+//   fastPathHits: 850,
+//   tokenPoolStats: { ... }
 // }
 
 // Get detailed performance report
-const report = TemporalWrapper.getFormattingReport();
+const report = Atemporal.getFormattingPerformanceReport();
 console.log(report);
 // Comprehensive report with cache statistics and recommendations
 ```

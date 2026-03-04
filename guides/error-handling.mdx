@@ -513,21 +513,21 @@ console.log('Is valid?', (date as any)._isValid);
 ### Performance Debugging
 
 ```typescript
-import { TemporalWrapper } from 'atemporal';
+import { Atemporal } from 'atemporal';
 
 // Get formatting metrics
-const metrics = TemporalWrapper.getFormattingMetrics();
+const metrics = Atemporal.getFormattingMetrics();
 console.log('Formatting performance:', metrics);
 // {
 //   totalFormats: 1250,
 //   cacheHits: 980,
-//   cacheMisses: 270,
-//   hitRate: 0.784,
-//   averageTimeMs: 0.42
+//   averageFormatTime: 0.42,
+//   fastPathHits: 850,
+//   tokenPoolStats: { ... }
 // }
 
 // Get detailed report
-const report = TemporalWrapper.getFormattingReport();
+const report = Atemporal.getFormattingPerformanceReport();
 console.log(report);
 ```
 
