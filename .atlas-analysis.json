@@ -1,0 +1,112 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "Atemporal",
+  "projectDescription": "A modern and ergonomic date-time library powered by the Temporal API with Day.js-like syntax.",
+  "theme": "palm",
+  "primaryColor": "#848c8e",
+  "lightColor": "#11161e",
+  "darkColor": "#cfd0d2",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/working-with-dates",
+              "concepts/time-zones",
+              "concepts/formatting",
+              "concepts/immutability"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/migration",
+              "guides/advanced-patterns",
+              "guides/error-handling"
+            ]
+          },
+          {
+            "group": "Examples",
+            "pages": [
+              "examples/common-use-cases"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core API",
+            "pages": [
+              "api/factory-functions",
+              "api/manipulation",
+              "api/querying",
+              "api/formatting-api",
+              "api/utilities"
+            ]
+          },
+          {
+            "group": "Plugins",
+            "pages": [
+              "plugins/relative-time",
+              "plugins/custom-parse-format",
+              "plugins/advanced-format",
+              "plugins/duration-humanizer",
+              "plugins/week-day",
+              "plugins/business-days",
+              "plugins/time-slots",
+              "plugins/date-range-overlap"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Immutable and chainable API inspired by Day.js",
+    "Plugin-powered extensibility system",
+    "First-class time zone support",
+    "Native Intl integration for localization",
+    "Full TypeScript support with type safety",
+    "Built on modern Temporal API",
+    "8 powerful plugins for extended functionality",
+    "Zero dependencies in production"
+  ],
+  "publicApiSurface": [
+    "atemporal() - Factory function for creating instances",
+    "atemporal.from() - Create from various inputs",
+    "atemporal.unix() - Create from Unix timestamp",
+    "atemporal.duration() - Create duration objects",
+    "atemporal.isValid() - Validate date inputs",
+    "atemporal.min() / max() - Compare multiple dates",
+    "atemporal.extend() - Load plugins",
+    "atemporal.lazyLoad() - Dynamically load plugins",
+    ".add() / .subtract() - Date manipulation",
+    ".startOf() / .endOf() - Truncate to unit",
+    ".format() - Format date strings",
+    ".isBefore() / .isAfter() - Date comparison",
+    ".diff() - Calculate differences",
+    ".timeZone() - Change time zones",
+    ".locale() - Set locale for formatting",
+    "Plugin: relativeTime - .fromNow() / .toNow()",
+    "Plugin: customParseFormat - Parse custom formats",
+    "Plugin: advancedFormat - Extended format tokens",
+    "Plugin: durationHumanizer - Humanize durations",
+    "Plugin: weekDay - Weekday utilities",
+    "Plugin: businessDays - Business day calculations",
+    "Plugin: timeSlots - Schedule slot management",
+    "Plugin: dateRangeOverlap - Range intersection detection"
+  ]
+}
